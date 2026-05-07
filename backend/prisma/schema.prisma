@@ -1,0 +1,147 @@
+// Barbería — Prisma Schema
+// All models designed for single-barber V1, future-proofed for multi-barber
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER (Barber) — Future-proofed for multi-barber
+// ============================================
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  image         String?
+  role          Role      @default(BARBER)
+
+  // Google OAuth tokens for Calendar API access
+  googleAccessToken   String?
+  googleRefreshToken  String?
+  googleTokenExpiry   DateTime?
+
+  // Relations
+  services      Service[]
+  appointments  Appointment[]
+  workSchedules WorkSchedule[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+enum Role {
+  BARBER
+  ADMIN
+}
+
+// ============================================
+// SERVICE — Managed by the barber (CRUD)
+// ============================================
+model Service {
+  id            String        @id @default(cuid())
+  name          String        // e.g., "Corte", "Corte + Barba"
+  description   String?
+  price         Decimal       @db.Decimal(10, 2) // Price in ARS
+  durationMin   Int           // Duration in minutes (e.g., 30, 60)
+  isActive      Boolean       @default(true)     // Soft delete
+
+  // Relations
+  barberId      String
+  barber        User          @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("services")
+}
+
+// ============================================
+// CLIENT — Guest booking (no auth required)
+// ============================================
+model Client {
+  id            String        @id @default(cuid())
+  name          String
+  phone         String
+  email         String
+
+  // Relations
+  appointments  Appointment[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Upsert by email+phone combo to avoid duplicates
+  @@unique([email, phone])
+  @@map("clients")
+}
+
+// ============================================
+// APPOINTMENT — Core booking entity
+// ============================================
+model Appointment {
+  id              String            @id @default(cuid())
+  startTime       DateTime          // Start of the appointment (stored in UTC)
+  endTime         DateTime          // Calculated: startTime + service.durationMin
+  status          AppointmentStatus @default(PENDIENTE)
+
+  // Price snapshot at booking time — ensures accurate historical revenue
+  priceAtBooking  Decimal           @db.Decimal(10, 2)
+
+  // Google Calendar integration
+  googleEventId   String?           // Calendar event ID for sync
+
+  // Notes (optional, barber can add notes)
+  notes           String?
+
+  // Relations
+  barberId        String
+  barber          User              @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  serviceId       String
+  service         Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  clientId        String
+  client          Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Indexes for efficient date-range queries (revenue, schedule)
+  @@index([barberId, startTime])
+  @@index([status])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  PENDIENTE   // Default — just booked
+  COMPLETADO  // Done — triggers revenue calculation
+  CANCELADO   // Cancelled by client or barber
+  NO_ASISTIO  // No-show
+}
+
+// ============================================
+// WORK SCHEDULE — Barber's working hours per day
+// ============================================
+model WorkSchedule {
+  id          String   @id @default(cuid())
+  dayOfWeek   Int      // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+  startTime   String   // "09:00" (HH:mm format, in America/Argentina/Buenos_Aires)
+  endTime     String   // "19:00"
+  isActive    Boolean  @default(true) // false = day off
+
+  // Relations
+  barberId    String
+  barber      User     @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  // One schedule entry per day per barber
+  @@unique([barberId, dayOfWeek])
+  @@map("work_schedules")
+}
