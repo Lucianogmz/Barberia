@@ -17,10 +17,31 @@ let RevenueService = class RevenueService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async getDefaultBarber() {
+        const barber = await this.prisma.user.findFirst({
+            where: { role: 'BARBER' },
+        });
+        if (!barber) {
+            throw new Error('No se encontró un barbero configurado');
+        }
+        return barber;
+    }
     getDateRangeUTC(startDate, endDate) {
         const startUTC = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
         const endUTC = new Date(endDate.getTime() + 3 * 60 * 60 * 1000);
         return { startUTC, endUTC };
+    }
+    async getMonthlyRevenueWithDefaultBarber(year, month) {
+        const barber = await this.getDefaultBarber();
+        return this.getMonthlyRevenue(barber.id, year, month);
+    }
+    async getServiceBreakdownWithDefaultBarber(year, month) {
+        const barber = await this.getDefaultBarber();
+        return this.getServiceBreakdown(barber.id, year, month);
+    }
+    async getDashboardSummaryWithDefaultBarber() {
+        const barber = await this.getDefaultBarber();
+        return this.getDashboardSummary(barber.id);
     }
     async getMonthlyRevenue(barberId, year, month) {
         const startOfMonth = new Date(year, month - 1, 1);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Scissors, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Scissors, Plus, Pencil, Trash2, Loader2, Check, X } from 'lucide-react';
 import { useApiToken } from '@/components/providers/token-provider';
 import {
   getAllServices,
@@ -31,6 +31,8 @@ export default function ServiciosPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
+  const [editingPrice, setEditingPrice] = useState<string | null>(null);
+  const [priceValue, setPriceValue] = useState('');
 
   // Form state
   const [formName, setFormName] = useState('');
@@ -130,10 +132,38 @@ export default function ServiciosPage() {
     }
   };
 
+  const startEditPrice = (service: Service) => {
+    setEditingPrice(service.id);
+    setPriceValue(String(service.price));
+  };
+
+  const savePrice = async (service: Service) => {
+    if (!token) return;
+    const newPrice = parseFloat(priceValue);
+    if (isNaN(newPrice) || newPrice <= 0) {
+      toast.error('Precio inválido');
+      return;
+    }
+    try {
+      await updateService(token, service.id, { price: newPrice } as any);
+      toast.success('Precio actualizado');
+      await loadServices();
+    } catch (error) {
+      toast.error('Error al actualizar el precio');
+    } finally {
+      setEditingPrice(null);
+    }
+  };
+
+  const cancelEditPrice = () => {
+    setEditingPrice(null);
+    setPriceValue('');
+  };
+
   if (loading || !token) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+        <Loader2 className="w-8 h-8 text-black animate-spin" />
       </div>
     );
   }
@@ -142,20 +172,20 @@ export default function ServiciosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Servicios</h1>
-          <p className="text-white/50 mt-1">
+          <h1 className="text-3xl font-bold text-black">Servicios</h1>
+          <p className="text-black/50 mt-1">
             Administrá los servicios que ofrecés
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
             onClick={openCreate}
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white h-9 px-4 py-2 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-black hover:bg-black/80 text-white h-9 px-4 py-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Nuevo servicio
           </DialogTrigger>
-          <DialogContent className="bg-[#1a1a2e] border-white/10 text-white">
+          <DialogContent className="bg-white border-black/10 text-black">
             <DialogHeader>
               <DialogTitle>
                 {editing ? 'Editar servicio' : 'Nuevo servicio'}
@@ -163,49 +193,49 @@ export default function ServiciosPage() {
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label className="text-white/70">Nombre</Label>
+                <Label className="text-black/70">Nombre</Label>
                 <Input
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Ej: Corte + Barba"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-black/5 border-black/10 text-black"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-white/70">Descripción (opcional)</Label>
+                <Label className="text-black/70">Descripción (opcional)</Label>
                 <Input
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="Ej: Corte de cabello y arreglo de barba"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-black/5 border-black/10 text-black"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-white/70">Precio (ARS)</Label>
+                  <Label className="text-black/70">Precio (ARS)</Label>
                   <Input
                     type="number"
                     value={formPrice}
                     onChange={(e) => setFormPrice(e.target.value)}
                     placeholder="5000"
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-black/5 border-black/10 text-black"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-white/70">Duración (min)</Label>
+                  <Label className="text-black/70">Duración (min)</Label>
                   <Input
                     type="number"
                     value={formDuration}
                     onChange={(e) => setFormDuration(e.target.value)}
                     placeholder="30"
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-black/5 border-black/10 text-black"
                   />
                 </div>
               </div>
               <Button
                 onClick={handleSave}
                 disabled={!formName || !formPrice || !formDuration || saving}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full bg-black hover:bg-black/80 text-white"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -222,47 +252,73 @@ export default function ServiciosPage() {
         {services.map((service) => (
           <Card
             key={service.id}
-            className={`border-white/10 backdrop-blur-sm ${
-              service.isActive ? 'bg-white/5' : 'bg-white/[0.02] opacity-60'
+            className={`border-black/10 backdrop-blur-sm ${
+              service.isActive ? 'bg-white' : 'bg-black/[0.02] opacity-60'
             }`}
           >
             <CardContent className="pt-6">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                    <Scissors className="w-5 h-5 text-purple-400" />
+                  <div className="w-10 h-10 rounded-xl bg-black/10 flex items-center justify-center">
+                    <Scissors className="w-5 h-5 text-black" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white text-lg">
+                    <h3 className="font-semibold text-black text-lg">
                       {service.name}
                     </h3>
                     {service.description && (
-                      <p className="text-sm text-white/40">
+                      <p className="text-sm text-black/40">
                         {service.description}
                       </p>
                     )}
                   </div>
                 </div>
                 {!service.isActive && (
-                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">
+                  <Badge className="bg-red-500/20 text-red-600 border-red-500/30 text-xs">
                     Inactivo
                   </Badge>
                 )}
               </div>
 
               <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center gap-4 text-sm text-white/50">
+                <div className="flex items-center gap-4 text-sm text-black/50">
                   <span>{service.durationMin} min</span>
-                  <span className="text-xl font-bold text-purple-400">
-                    {formatARS(Number(service.price))}
-                  </span>
+                  {editingPrice === service.id ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={priceValue}
+                        onChange={(e) => setPriceValue(e.target.value)}
+                        className="w-24 h-8 bg-black/10 border-black/20 text-black text-lg font-bold"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') savePrice(service);
+                          if (e.key === 'Escape') cancelEditPrice();
+                        }}
+                      />
+                      <Button size="sm" onClick={() => savePrice(service)} className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white">
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={cancelEditPrice} className="h-8 w-8 p-0 text-black/40 hover:text-black">
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span
+                      className="text-xl font-bold text-black cursor-pointer hover:text-black/70"
+                      onClick={() => startEditPrice(service)}
+                      title="Click para editar precio"
+                    >
+                      {formatARS(Number(service.price))}
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-1">
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => openEdit(service)}
-                    className="text-white/40 hover:text-white h-8 w-8 p-0"
+                    className="text-black/40 hover:text-black h-8 w-8 p-0"
                   >
                     <Pencil className="w-4 h-4" />
                   </Button>
@@ -271,7 +327,7 @@ export default function ServiciosPage() {
                       size="sm"
                       variant="ghost"
                       onClick={() => handleDelete(service)}
-                      className="text-white/40 hover:text-red-400 h-8 w-8 p-0"
+                      className="text-black/40 hover:text-red-600 h-8 w-8 p-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -280,7 +336,7 @@ export default function ServiciosPage() {
                       size="sm"
                       variant="ghost"
                       onClick={() => handleReactivate(service)}
-                      className="text-green-400/60 hover:text-green-400 text-xs"
+                      className="text-green-600/60 hover:text-green-600 text-xs"
                     >
                       Reactivar
                     </Button>

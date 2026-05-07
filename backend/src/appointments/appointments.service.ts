@@ -14,6 +14,10 @@ import { AppointmentStatus } from '@prisma/client';
 
 // 10-minute buffer between appointments
 const BUFFER_MINUTES = 10;
+// Fixed slot interval: 1 turn per hour
+const SLOT_INTERVAL_MINUTES = 60;
+// Fixed appointment duration: 40 minutes
+const APPOINTMENT_DURATION_MINUTES = 40;
 
 export interface TimeSlot {
   startTime: string; // ISO string
@@ -122,16 +126,24 @@ export class AppointmentsService {
       ...busyIntervals,
     ];
 
-    // Generate possible slots based on service duration
+    // Generate possible slots - ONE per hour, fixed 40 min duration
     const slots: TimeSlot[] = [];
-    const slotDuration = service.durationMin * 60 * 1000; // in ms
+    const slotInterval = SLOT_INTERVAL_MINUTES * 60 * 1000; // 60 min between slots
+    const appointmentDuration = APPOINTMENT_DURATION_MINUTES * 60 * 1000; // 40 min actual duration
     const now = new Date();
+
+    // Use Argentina timezone for slot times (UTC-3)
+    const toArgentinaISO = (date: Date): string => {
+      const tzOffset = -3 * 60 * 60 * 1000; // Argentina UTC-3
+      const argentinaTime = new Date(date.getTime() + tzOffset);
+      return argentinaTime.toISOString().replace('Z', '-03:00');
+    };
 
     let currentSlotStart = dayStartUTC;
 
-    while (currentSlotStart.getTime() + slotDuration <= dayEndUTC.getTime()) {
+    while (currentSlotStart.getTime() + appointmentDuration <= dayEndUTC.getTime()) {
       const currentSlotEnd = new Date(
-        currentSlotStart.getTime() + slotDuration,
+        currentSlotStart.getTime() + appointmentDuration,
       );
 
       // Check if this slot overlaps with any busy interval
@@ -144,15 +156,13 @@ export class AppointmentsService {
       const isPast = currentSlotStart <= now;
 
       slots.push({
-        startTime: currentSlotStart.toISOString(),
-        endTime: currentSlotEnd.toISOString(),
+        startTime: toArgentinaISO(currentSlotStart),
+        endTime: toArgentinaISO(currentSlotEnd),
         available: !isConflicting && !isPast,
       });
 
-      // Move to next slot (service duration + buffer)
-      currentSlotStart = new Date(
-        currentSlotStart.getTime() + slotDuration + BUFFER_MINUTES * 60 * 1000,
-      );
+      // Move to next slot (60 min interval)
+      currentSlotStart = new Date(currentSlotStart.getTime() + slotInterval);
     }
 
     return slots;
@@ -175,7 +185,7 @@ export class AppointmentsService {
 
     const startTime = new Date(dto.startTime);
     const endTime = new Date(
-      startTime.getTime() + service.durationMin * 60 * 1000,
+      startTime.getTime() + APPOINTMENT_DURATION_MINUTES * 60 * 1000,
     );
 
     // Verify slot is still available (prevent race conditions)
@@ -260,9 +270,20 @@ export class AppointmentsService {
   }
 
   /**
-   * List appointments with optional filters (protected — barber dashboard).
+   * List appointments using the default barber (for dashboard).
    */
-  async findAll(
+  async findAllWithDefaultBarber(filters?: {
+    date?: string;
+    status?: AppointmentStatus;
+  }) {
+    const barber = await this.getDefaultBarber();
+    return this.findAllByBarberId(barber.id, filters);
+  }
+
+  /**
+   * List appointments by barber ID with optional filters.
+   */
+  async findAllByBarberId(
     barberId: string,
     filters?: {
       date?: string;
@@ -278,11 +299,11 @@ export class AppointmentsService {
     if (filters?.date) {
       const dayStart = new Date(filters.date + 'T00:00:00-03:00');
       const dayEnd = new Date(filters.date + 'T23:59:59-03:00');
-      // Convert to UTC
-      where.startTime = {
-        gte: new Date(dayStart.getTime() + 3 * 60 * 60 * 1000),
-        lte: new Date(dayEnd.getTime() + 3 * 60 * 60 * 1000),
-      };
+      const gte = new Date(dayStart.getTime() + 3 * 60 * 60 * 1000);
+      const lte = new Date(dayEnd.getTime() + 3 * 60 * 60 * 1000);
+      console.log(`[Appointments] Query date: ${filters.date}, barberId: ${barberId}`);
+      console.log(`[Appointments] Query range: gte=${gte.toISOString()}, lte=${lte.toISOString()}`);
+      where.startTime = { gte, lte };
     }
 
     return this.prisma.appointment.findMany({
@@ -293,6 +314,31 @@ export class AppointmentsService {
       },
       orderBy: { startTime: 'asc' },
     });
+  }
+
+  /**
+   * List appointments with optional filters (protected — barber dashboard).
+   * @deprecated Use findAllWithDefaultBarber instead
+   */
+  async findAll(
+    barberId: string,
+    filters?: {
+      date?: string;
+      status?: AppointmentStatus;
+    },
+  ) {
+    return this.findAllByBarberId(barberId, filters);
+  }
+
+  /**
+   * Update appointment status using default barber.
+   */
+  async updateStatusWithDefaultBarber(
+    appointmentId: string,
+    dto: UpdateStatusDto,
+  ) {
+    const barber = await this.getDefaultBarber();
+    return this.updateStatus(appointmentId, barber.id, dto);
   }
 
   /**

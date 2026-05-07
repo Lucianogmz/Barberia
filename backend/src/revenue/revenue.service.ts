@@ -22,13 +22,49 @@ export class RevenueService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Helper: Get the default barber.
+   */
+  private async getDefaultBarber() {
+    const barber = await this.prisma.user.findFirst({
+      where: { role: 'BARBER' },
+    });
+    if (!barber) {
+      throw new Error('No se encontró un barbero configurado');
+    }
+    return barber;
+  }
+
+  /**
    * Helper: Get Argentina timezone date boundaries in UTC.
    */
   private getDateRangeUTC(startDate: Date, endDate: Date) {
-    // Argentina is UTC-3, so we add 3 hours to convert local midnight to UTC
     const startUTC = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
     const endUTC = new Date(endDate.getTime() + 3 * 60 * 60 * 1000);
     return { startUTC, endUTC };
+  }
+
+  /**
+   * Wrapper: Get monthly revenue using default barber.
+   */
+  async getMonthlyRevenueWithDefaultBarber(year: number, month: number) {
+    const barber = await this.getDefaultBarber();
+    return this.getMonthlyRevenue(barber.id, year, month);
+  }
+
+  /**
+   * Wrapper: Get service breakdown using default barber.
+   */
+  async getServiceBreakdownWithDefaultBarber(year: number, month: number) {
+    const barber = await this.getDefaultBarber();
+    return this.getServiceBreakdown(barber.id, year, month);
+  }
+
+  /**
+   * Wrapper: Get dashboard summary using default barber.
+   */
+  async getDashboardSummaryWithDefaultBarber() {
+    const barber = await this.getDefaultBarber();
+    return this.getDashboardSummary(barber.id);
   }
 
   /**

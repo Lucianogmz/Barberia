@@ -33,8 +33,8 @@ export class ServicesController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('all')
-  async findAll(@Request() req: any) {
-    return this.servicesService.findAll(req.user.id);
+  async findAll() {
+    return this.servicesService.findAllWithDefaultBarber();
   }
 
   /**
@@ -43,8 +43,8 @@ export class ServicesController {
    */
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Request() req: any, @Body() dto: CreateServiceDto) {
-    return this.servicesService.create(req.user.id, dto);
+  async create(@Body() dto: CreateServiceDto) {
+    return this.servicesService.createWithDefaultBarber(dto);
   }
 
   /**
@@ -55,10 +55,9 @@ export class ServicesController {
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Request() req: any,
     @Body() dto: UpdateServiceDto,
   ) {
-    return this.servicesService.update(id, req.user.id, dto);
+    return this.servicesService.updateWithDefaultBarber(id, dto);
   }
 
   /**
@@ -67,7 +66,7 @@ export class ServicesController {
    */
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async deactivate(@Param('id') id: string, @Request() req: any) {
-    return this.servicesService.deactivate(id, req.user.id);
+  async deactivate(@Param('id') id: string) {
+    return this.servicesService.deactivateWithDefaultBarber(id);
   }
 }

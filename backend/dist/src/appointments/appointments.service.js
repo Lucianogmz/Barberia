@@ -17,6 +17,8 @@ const calendar_service_1 = require("../calendar/calendar.service");
 const email_service_1 = require("../email/email.service");
 const schedule_service_1 = require("../schedule/schedule.service");
 const BUFFER_MINUTES = 10;
+const SLOT_INTERVAL_MINUTES = 60;
+const APPOINTMENT_DURATION_MINUTES = 40;
 let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
     prisma;
     calendarService;
@@ -78,19 +80,25 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
             ...busyIntervals,
         ];
         const slots = [];
-        const slotDuration = service.durationMin * 60 * 1000;
+        const slotInterval = SLOT_INTERVAL_MINUTES * 60 * 1000;
+        const appointmentDuration = APPOINTMENT_DURATION_MINUTES * 60 * 1000;
         const now = new Date();
+        const toArgentinaISO = (date) => {
+            const tzOffset = -3 * 60 * 60 * 1000;
+            const argentinaTime = new Date(date.getTime() + tzOffset);
+            return argentinaTime.toISOString().replace('Z', '-03:00');
+        };
         let currentSlotStart = dayStartUTC;
-        while (currentSlotStart.getTime() + slotDuration <= dayEndUTC.getTime()) {
-            const currentSlotEnd = new Date(currentSlotStart.getTime() + slotDuration);
+        while (currentSlotStart.getTime() + appointmentDuration <= dayEndUTC.getTime()) {
+            const currentSlotEnd = new Date(currentSlotStart.getTime() + appointmentDuration);
             const isConflicting = allBusyIntervals.some((busy) => currentSlotStart < busy.end && currentSlotEnd > busy.start);
             const isPast = currentSlotStart <= now;
             slots.push({
-                startTime: currentSlotStart.toISOString(),
-                endTime: currentSlotEnd.toISOString(),
+                startTime: toArgentinaISO(currentSlotStart),
+                endTime: toArgentinaISO(currentSlotEnd),
                 available: !isConflicting && !isPast,
             });
-            currentSlotStart = new Date(currentSlotStart.getTime() + slotDuration + BUFFER_MINUTES * 60 * 1000);
+            currentSlotStart = new Date(currentSlotStart.getTime() + slotInterval);
         }
         return slots;
     }
@@ -103,7 +111,7 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
             throw new common_1.NotFoundException('Servicio no encontrado');
         }
         const startTime = new Date(dto.startTime);
-        const endTime = new Date(startTime.getTime() + service.durationMin * 60 * 1000);
+        const endTime = new Date(startTime.getTime() + APPOINTMENT_DURATION_MINUTES * 60 * 1000);
         const conflicting = await this.prisma.appointment.findFirst({
             where: {
                 barberId: barber.id,
@@ -168,7 +176,11 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
         this.logger.log(`New appointment created: ${appointment.id} for ${client.name}`);
         return appointment;
     }
-    async findAll(barberId, filters) {
+    async findAllWithDefaultBarber(filters) {
+        const barber = await this.getDefaultBarber();
+        return this.findAllByBarberId(barber.id, filters);
+    }
+    async findAllByBarberId(barberId, filters) {
         const where = { barberId };
         if (filters?.status) {
             where.status = filters.status;
@@ -176,10 +188,11 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
         if (filters?.date) {
             const dayStart = new Date(filters.date + 'T00:00:00-03:00');
             const dayEnd = new Date(filters.date + 'T23:59:59-03:00');
-            where.startTime = {
-                gte: new Date(dayStart.getTime() + 3 * 60 * 60 * 1000),
-                lte: new Date(dayEnd.getTime() + 3 * 60 * 60 * 1000),
-            };
+            const gte = new Date(dayStart.getTime() + 3 * 60 * 60 * 1000);
+            const lte = new Date(dayEnd.getTime() + 3 * 60 * 60 * 1000);
+            console.log(`[Appointments] Query date: ${filters.date}, barberId: ${barberId}`);
+            console.log(`[Appointments] Query range: gte=${gte.toISOString()}, lte=${lte.toISOString()}`);
+            where.startTime = { gte, lte };
         }
         return this.prisma.appointment.findMany({
             where,
@@ -189,6 +202,13 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
             },
             orderBy: { startTime: 'asc' },
         });
+    }
+    async findAll(barberId, filters) {
+        return this.findAllByBarberId(barberId, filters);
+    }
+    async updateStatusWithDefaultBarber(appointmentId, dto) {
+        const barber = await this.getDefaultBarber();
+        return this.updateStatus(appointmentId, barber.id, dto);
     }
     async updateStatus(appointmentId, barberId, dto) {
         const appointment = await this.prisma.appointment.findFirst({

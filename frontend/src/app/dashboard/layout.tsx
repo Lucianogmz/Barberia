@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, createContext, useContext } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { SessionProvider } from 'next-auth/react';
+import { TokenContext } from '@/components/providers/token-provider';
 import {
   Scissors,
   LayoutDashboard,
@@ -24,12 +25,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [apiToken, setApiToken] = useState<string | null>(null);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (skip for /dashboard/login)
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' && pathname !== '/dashboard/login') {
       router.push('/dashboard/login');
     }
-  }, [status, router]);
+  }, [status, router, pathname]);
 
   // Register tokens with backend on first load
   useEffect(() => {
@@ -69,13 +70,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-[#0a0a1a] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-black border-t-transparent" />
       </div>
     );
   }
 
-  if (status === 'unauthenticated') return null;
+  if (status === 'unauthenticated' && pathname !== '/dashboard/login') return null;
 
   const navItems = [
     { href: '/dashboard', label: 'Panel', icon: LayoutDashboard },
@@ -91,16 +92,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a1a] flex">
+    <div className="min-h-screen bg-black flex">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-white/5 bg-[#0d0d20]">
+      <aside className="hidden lg:flex w-64 flex-col border-r border-white/10 bg-white">
         <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-            <Scissors className="w-5 h-5 text-white" />
+          <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center">
+            <Scissors className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white">Barbería</h1>
-            <p className="text-xs text-white/40">Panel de control</p>
+            <h1 className="text-xl font-bold text-black">Barbería</h1>
+            <p className="text-sm text-black/50">Panel de control</p>
           </div>
         </div>
 
@@ -111,10 +112,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               <a
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-medium transition-all
                   ${isActive
-                    ? 'bg-purple-500/15 text-purple-400'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
+                    ? 'bg-black/10 text-black'
+                    : 'text-black/50 hover:text-black hover:bg-black/5'
                   }`}
               >
                 <item.icon className="w-5 h-5" />
@@ -124,20 +125,20 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-black/10">
           <div className="flex items-center gap-3 px-2 mb-4">
             {session?.user?.image && (
               <img
                 src={session.user.image}
                 alt="Avatar"
-                className="w-8 h-8 rounded-full"
+                className="w-10 h-10 rounded-full border-2 border-black"
               />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-base font-medium text-black truncate">
                 {session?.user?.name}
               </p>
-              <p className="text-xs text-white/40 truncate">
+              <p className="text-sm text-black/50 truncate">
                 {session?.user?.email}
               </p>
             </div>
@@ -145,7 +146,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="w-full justify-start text-white/50 hover:text-red-400 hover:bg-red-500/10"
+            className="w-full justify-start text-black/50 hover:text-red-600 hover:bg-red-50"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Cerrar sesión
@@ -163,18 +164,18 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar - Mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col border-r border-white/5 bg-[#0d0d20] transform transition-transform lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col border-r border-white/10 bg-white transform transition-transform lg:hidden ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
               <Scissors className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-lg font-bold text-white">Barbería</h1>
+            <h1 className="text-lg font-bold text-black">Barbería</h1>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="text-white/50">
+          <button onClick={() => setSidebarOpen(false)} className="text-black/50">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -187,10 +188,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all
                   ${isActive
-                    ? 'bg-purple-500/15 text-purple-400'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
+                    ? 'bg-black/10 text-black'
+                    : 'text-black/50 hover:text-black hover:bg-black/5'
                   }`}
               >
                 <item.icon className="w-5 h-5" />
@@ -200,11 +201,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-black/10">
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="w-full justify-start text-white/50 hover:text-red-400"
+            className="w-full justify-start text-black/50 hover:text-red-600"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Cerrar sesión
@@ -215,15 +216,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Mobile header */}
-        <header className="lg:hidden flex items-center justify-between p-4 border-b border-white/5">
-          <button onClick={() => setSidebarOpen(true)} className="text-white/70">
+        <header className="lg:hidden flex items-center justify-between p-4 border-b border-black/10 bg-white">
+          <button onClick={() => setSidebarOpen(true)} className="text-black">
             <Menu className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-bold text-white">Barbería</h1>
+          <h1 className="text-lg font-bold text-black">Barbería</h1>
           <div className="w-6" />
         </header>
 
-        <main className="flex-1 p-6 lg:p-8 overflow-auto">
+        <main className="flex-1 p-6 lg:p-8 overflow-auto bg-gray-50">
           {/* Pass apiToken through context */}
           <TokenContext.Provider value={apiToken}>
             {children}
@@ -233,10 +234,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-// Context for sharing the API token with child pages
-
-import { TokenContext } from '@/components/providers/token-provider';
 
 export default function DashboardLayout({
   children,

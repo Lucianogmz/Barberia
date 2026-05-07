@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   CalendarDays,
-  Search,
   Loader2,
   Phone,
   Mail,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useApiToken } from '@/components/providers/token-provider';
 import {
@@ -22,180 +22,206 @@ import {
   formatARS,
   formatTimeES,
   formatDateES,
+  formatDateShort,
+  toDateString,
+  getTodayDateString,
   STATUS_LABELS,
   STATUS_COLORS,
 } from '@/lib/formatters';
 import { toast } from 'sonner';
 
+function addDays(dateStr: string, days: number): string {
+  const date = new Date(dateStr + 'T00:00:00-03:00');
+  date.setDate(date.getDate() + days);
+  return toDateString(date);
+}
+
 export default function TurnosPage() {
   const token = useApiToken();
-  const [appointments, setAppointments] = useState<AppointmentResponse[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Record<string, AppointmentResponse[]>>({});
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0],
-  );
-  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [tokenReady, setTokenReady] = useState(false);
+  const [baseDate, setBaseDate] = useState(getTodayDateString());
 
-  const loadAppointments = async () => {
-    if (!token) return;
-    setLoading(true);
+  const dates = [baseDate, addDays(baseDate, 1), addDays(baseDate, 2)];
+  const dateLabels = ['Hoy', 'Mañana', 'Pasado mañana'];
+
+  useEffect(() => {
+    if (token) {
+      setTokenReady(true);
+    } else {
+      const stored = localStorage.getItem('barberia_api_token');
+      if (stored) {
+        setTokenReady(true);
+      }
+    }
+  }, [token]);
+
+  const loadAppointmentsForDate = async (date: string): Promise<AppointmentResponse[]> => {
+    const effectiveToken = token || localStorage.getItem('barberia_api_token');
+    if (!effectiveToken) return [];
     try {
-      const data = await getAppointments(token, selectedDate, filterStatus || undefined);
-      setAppointments(data);
+      return await getAppointments(effectiveToken, date, undefined);
     } catch (error) {
-      toast.error('Error al cargar los turnos');
-    } finally {
-      setLoading(false);
+      console.error(`Error loading for ${date}:`, error);
+      return [];
     }
   };
 
+  const loadAllAppointments = async () => {
+    setLoading(true);
+    const results: Record<string, AppointmentResponse[]> = {};
+    for (const date of dates) {
+      results[date] = await loadAppointmentsForDate(date);
+    }
+    setAllAppointments(results);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    loadAppointments();
-  }, [token, selectedDate, filterStatus]);
+    if (tokenReady && (token || localStorage.getItem('barberia_api_token'))) {
+      loadAllAppointments();
+    }
+  }, [tokenReady, token, baseDate]);
 
   const handleStatusChange = async (id: string, status: string) => {
-    if (!token) return;
+    const effectiveToken = token || localStorage.getItem('barberia_api_token');
+    if (!effectiveToken) return;
     try {
-      await updateAppointmentStatus(token, id, status);
-      await loadAppointments();
+      await updateAppointmentStatus(effectiveToken, id, status);
+      await loadAllAppointments();
       toast.success('Estado actualizado');
     } catch (error) {
       toast.error('Error al actualizar el estado');
     }
   };
 
-  const statuses = ['', 'PENDIENTE', 'COMPLETADO', 'CANCELADO', 'NO_ASISTIO'];
+  const handlePrevDays = () => setBaseDate(addDays(baseDate, -3));
+  const handleNextDays = () => setBaseDate(addDays(baseDate, 3));
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white">Turnos</h1>
-        <p className="text-white/50 mt-1">
+        <h1 className="text-3xl font-bold text-black">Turnos</h1>
+        <p className="text-black/50 mt-1">
           Gestioná todos los turnos de tu barbería
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <Input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="w-48 bg-white/5 border-white/10 text-white"
-        />
-        <div className="flex gap-1">
-          {statuses.map((s) => (
-            <Button
-              key={s || 'all'}
-              size="sm"
-              variant="ghost"
-              onClick={() => setFilterStatus(s)}
-              className={`text-xs ${
-                filterStatus === s
-                  ? 'bg-purple-500/20 text-purple-400'
-                  : 'text-white/50 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {s ? STATUS_LABELS[s] : 'Todos'}
-            </Button>
-          ))}
-        </div>
+      {/* Navigation */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={handlePrevDays} className="text-black/50 hover:text-black">
+          <ChevronLeft className="w-5 h-5" />
+        </Button>
+        <span className="text-black/70 text-sm">
+          {formatDateShort(dates[0])} - {formatDateShort(dates[2])}
+        </span>
+        <Button variant="ghost" size="icon" onClick={handleNextDays} className="text-black/50 hover:text-black">
+          <ChevronRight className="w-5 h-5" />
+        </Button>
       </div>
 
-      {/* Appointments list */}
-      <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-purple-400" />
-            {formatDateES(selectedDate)}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
-            </div>
-          ) : appointments.length === 0 ? (
-            <p className="text-white/30 text-center py-12">
-              No hay turnos para esta fecha
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {appointments.map((apt) => (
-                <div
-                  key={apt.id}
-                  className="p-5 rounded-xl bg-white/5 border border-white/5 space-y-3"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="text-center min-w-[70px] py-2 px-3 rounded-lg bg-white/5">
-                        <p className="text-lg font-bold text-white">
-                          {formatTimeES(apt.startTime)}
-                        </p>
-                        <p className="text-xs text-white/30">
-                          {formatTimeES(apt.endTime)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white text-lg">
-                          {apt.client.name}
-                        </p>
-                        <p className="text-sm text-purple-400">
-                          {apt.service.name}
-                        </p>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-white/30">
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {apt.client.phone}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
-                            {apt.client.email}
-                          </span>
+      {/* Appointments for each day - Stacked vertically */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 text-black animate-spin" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {dates.map((date, idx) => {
+            const dayAppointments = allAppointments[date] || [];
+            const isToday = idx === 0;
+            return (
+              <Card key={date} className="border-2 border-black bg-white shadow-sm">
+                <CardHeader className={`pb-3 ${isToday ? 'bg-black/5 -mx-6 -mt-6 px-6 py-4 rounded-t-xl' : ''}`}>
+                  <CardTitle className="text-black text-lg flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-black" />
+                    {dateLabels[idx]} - {formatDateES(date)}
+                    <Badge variant="outline" className="ml-auto border-black/20 text-black/50 text-xs">
+                      {dayAppointments.length} {dayAppointments.length === 1 ? 'turno' : 'turnos'}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {dayAppointments.length === 0 ? (
+                    <p className="text-black/30 text-center py-6 text-sm">
+                      No hay turnos
+                    </p>
+                  ) : (
+                    dayAppointments.map((apt) => (
+                      <div
+                        key={apt.id}
+                        className="p-4 rounded-xl bg-black/5 border border-black/5 space-y-3"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-center min-w-[60px] py-1.5 px-2 rounded-lg bg-black/5">
+                              <p className="text-base font-bold text-black">
+                                {formatTimeES(apt.startTime)}
+                              </p>
+                              <p className="text-xs text-black/30">
+                                {formatTimeES(apt.endTime)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-black">
+                                {apt.client.name}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {apt.service.name}
+                              </p>
+                              <div className="flex items-center gap-3 mt-0.5 text-xs text-black/30">
+                                <span className="flex items-center gap-1">
+                                  <Phone className="w-3 h-3" />
+                                  {apt.client.phone}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1.5">
+                            <Badge className={`${STATUS_COLORS[apt.status]} border text-xs`}>
+                              {STATUS_LABELS[apt.status]}
+                            </Badge>
+                            <span className="text-base font-bold text-black">
+                              {formatARS(Number(apt.priceAtBooking))}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge className={`${STATUS_COLORS[apt.status]} border text-xs`}>
-                        {STATUS_LABELS[apt.status]}
-                      </Badge>
-                      <span className="text-lg font-bold text-white">
-                        {formatARS(Number(apt.priceAtBooking))}
-                      </span>
-                    </div>
-                  </div>
 
-                  {apt.status === 'PENDIENTE' && (
-                    <div className="flex gap-2 pt-2 border-t border-white/5">
-                      <Button
-                        size="sm"
-                        onClick={() => handleStatusChange(apt.id, 'COMPLETADO')}
-                        className="bg-green-600/20 text-green-400 hover:bg-green-600/30 text-xs"
-                      >
-                        ✓ Completar
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleStatusChange(apt.id, 'NO_ASISTIO')}
-                        className="bg-orange-600/20 text-orange-400 hover:bg-orange-600/30 text-xs"
-                      >
-                        No asistió
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleStatusChange(apt.id, 'CANCELADO')}
-                        className="bg-red-600/20 text-red-400 hover:bg-red-600/30 text-xs"
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
+                        {apt.status === 'PENDIENTE' && (
+                          <div className="flex gap-2 pt-2 border-t border-black/5">
+                            <Button
+                              size="sm"
+                              onClick={() => handleStatusChange(apt.id, 'COMPLETADO')}
+                              className="bg-green-600/20 text-green-600 hover:bg-green-600/30 text-xs h-7"
+                            >
+                              ✓ Completar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleStatusChange(apt.id, 'NO_ASISTIO')}
+                              className="bg-orange-600/20 text-orange-600 hover:bg-orange-600/30 text-xs h-7"
+                            >
+                              No asistió
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleStatusChange(apt.id, 'CANCELADO')}
+                              className="bg-red-600/20 text-red-600 hover:bg-red-600/30 text-xs h-7"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))
                   )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

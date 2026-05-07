@@ -16,11 +16,24 @@ export function formatARS(amount: number): string {
 }
 
 /**
+ * Parse a YYYY-MM-DD string to a Date in Argentina timezone.
+ * This avoids the UTC midnight issue when the string is interpreted as UTC.
+ */
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0); // Noon to avoid DST issues
+}
+
+/**
  * Format a date for display in Spanish (Argentina timezone).
  * Example: "martes, 6 de mayo de 2026"
  */
 export function formatDateES(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === 'string' && date.length === 10
+    ? parseLocalDate(date)
+    : typeof date === 'string'
+      ? new Date(date)
+      : date;
   return d.toLocaleDateString('es-AR', {
     weekday: 'long',
     year: 'numeric',
@@ -35,7 +48,11 @@ export function formatDateES(date: Date | string): string {
  * Example: "06/05/2026"
  */
 export function formatDateShort(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === 'string' && date.length === 10
+    ? parseLocalDate(date)
+    : typeof date === 'string'
+      ? new Date(date)
+      : date;
   return d.toLocaleDateString('es-AR', {
     day: '2-digit',
     month: '2-digit',
@@ -72,6 +89,15 @@ export function formatTimeRange(start: Date | string, end: Date | string): strin
 export function toDateString(date: Date): string {
   const d = new Date(date.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Get today's date as YYYY-MM-DD string in Argentina timezone.
+ */
+export function getTodayDateString(): string {
+  const now = new Date();
+  const argentinaDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+  return `${argentinaDate.getFullYear()}-${String(argentinaDate.getMonth() + 1).padStart(2, '0')}-${String(argentinaDate.getDate()).padStart(2, '0')}`;
 }
 
 /**

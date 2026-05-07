@@ -38,11 +38,65 @@ export declare class AppointmentsService {
         endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
-        notes: string | null;
-        serviceId: string;
     }>;
+    findAllWithDefaultBarber(filters?: {
+        date?: string;
+        status?: AppointmentStatus;
+    }): Promise<({
+        service: {
+            name: string;
+            durationMin: number;
+        };
+        client: {
+            email: string;
+            name: string;
+            phone: string;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        barberId: string;
+        startTime: Date;
+        endTime: Date;
+        clientId: string;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
+        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
+        googleEventId: string | null;
+    })[]>;
+    findAllByBarberId(barberId: string, filters?: {
+        date?: string;
+        status?: AppointmentStatus;
+    }): Promise<({
+        service: {
+            name: string;
+            durationMin: number;
+        };
+        client: {
+            email: string;
+            name: string;
+            phone: string;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        barberId: string;
+        startTime: Date;
+        endTime: Date;
+        clientId: string;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
+        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
+        googleEventId: string | null;
+    })[]>;
     findAll(barberId: string, filters?: {
         date?: string;
         status?: AppointmentStatus;
@@ -65,11 +119,35 @@ export declare class AppointmentsService {
         endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
-        notes: string | null;
-        serviceId: string;
     })[]>;
+    updateStatusWithDefaultBarber(appointmentId: string, dto: UpdateStatusDto): Promise<{
+        service: {
+            name: string;
+            durationMin: number;
+        };
+        client: {
+            email: string;
+            name: string;
+            phone: string;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        barberId: string;
+        startTime: Date;
+        endTime: Date;
+        clientId: string;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
+        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
+        googleEventId: string | null;
+    }>;
     updateStatus(appointmentId: string, barberId: string, dto: UpdateStatusDto): Promise<{
         service: {
             name: string;
@@ -89,9 +167,9 @@ export declare class AppointmentsService {
         endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
-        notes: string | null;
-        serviceId: string;
     }>;
 }

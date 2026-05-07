@@ -51,7 +51,7 @@ export class AppointmentsController {
     @Query('date') date?: string,
     @Query('status') status?: AppointmentStatus,
   ) {
-    return this.appointmentsService.findAll(req.user.id, {
+    return this.appointmentsService.findAllWithDefaultBarber({
       date,
       status,
     });
@@ -68,6 +68,6 @@ export class AppointmentsController {
     @Request() req: any,
     @Body() dto: UpdateStatusDto,
   ) {
-    return this.appointmentsService.updateStatus(id, req.user.id, dto);
+    return this.appointmentsService.updateStatusWithDefaultBarber(id, dto);
   }
 }

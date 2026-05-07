@@ -25,10 +25,10 @@ export declare class AppointmentsController {
         endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
-        notes: string | null;
-        serviceId: string;
     }>;
     findAll(req: any, date?: string, status?: AppointmentStatus): Promise<({
         service: {
@@ -49,10 +49,10 @@ export declare class AppointmentsController {
         endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
-        notes: string | null;
-        serviceId: string;
     })[]>;
     updateStatus(id: string, req: any, dto: UpdateStatusDto): Promise<{
         service: {
@@ -73,9 +73,9 @@ export declare class AppointmentsController {
         endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        notes: string | null;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
-        notes: string | null;
-        serviceId: string;
     }>;
 }

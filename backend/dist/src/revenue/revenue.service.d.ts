@@ -15,7 +15,25 @@ export interface ServiceBreakdown {
 export declare class RevenueService {
     private readonly prisma;
     constructor(prisma: PrismaService);
+    private getDefaultBarber;
     private getDateRangeUTC;
+    getMonthlyRevenueWithDefaultBarber(year: number, month: number): Promise<RevenueSummary>;
+    getServiceBreakdownWithDefaultBarber(year: number, month: number): Promise<ServiceBreakdown[]>;
+    getDashboardSummaryWithDefaultBarber(): Promise<{
+        today: {
+            revenue: number;
+            completedCount: number;
+            pendingCount: number;
+        };
+        week: {
+            revenue: number;
+            completedCount: number;
+        };
+        month: {
+            revenue: number;
+            completedCount: number;
+        };
+    }>;
     getMonthlyRevenue(barberId: string, year: number, month: number): Promise<RevenueSummary>;
     getDashboardSummary(barberId: string): Promise<{
         today: {

@@ -17,6 +17,15 @@ let ServicesService = class ServicesService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async getDefaultBarber() {
+        const barber = await this.prisma.user.findFirst({
+            where: { role: 'BARBER' },
+        });
+        if (!barber) {
+            throw new Error('No se encontró un barbero configurado');
+        }
+        return barber;
+    }
     async findActive() {
         return this.prisma.service.findMany({
             where: { isActive: true },
@@ -30,11 +39,27 @@ let ServicesService = class ServicesService {
             },
         });
     }
+    async findAllWithDefaultBarber() {
+        const barber = await this.getDefaultBarber();
+        return this.findAll(barber.id);
+    }
     async findAll(barberId) {
         return this.prisma.service.findMany({
             where: { barberId },
             orderBy: { createdAt: 'desc' },
         });
+    }
+    async createWithDefaultBarber(dto) {
+        const barber = await this.getDefaultBarber();
+        return this.create(barber.id, dto);
+    }
+    async updateWithDefaultBarber(id, dto) {
+        const barber = await this.getDefaultBarber();
+        return this.update(id, barber.id, dto);
+    }
+    async deactivateWithDefaultBarber(id) {
+        const barber = await this.getDefaultBarber();
+        return this.deactivate(id, barber.id);
     }
     async findOne(id) {
         const service = await this.prisma.service.findUnique({

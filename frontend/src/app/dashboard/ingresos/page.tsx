@@ -12,7 +12,7 @@ import {
   Loader2,
   UserX,
   XCircle,
-  Clock,
+  CalendarDays,
 } from 'lucide-react';
 import { useApiToken } from '@/components/providers/token-provider';
 import {
@@ -80,156 +80,179 @@ export default function IngresosPage() {
   if (loading || !token) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+        <Loader2 className="w-8 h-8 text-black animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Ingresos</h1>
-        <p className="text-white/50 mt-1">
-          Métricas financieras y desglose por servicio
-        </p>
+    <div className="space-y-8 p-6 lg:p-8 max-w-7xl mx-auto">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Métricas de Ingresos</h1>
+          <p className="text-slate-500 mt-1">
+            Seguimiento financiero y análisis de servicios
+          </p>
+        </div>
+        
+        {/* Month Selector */}
+        <div className="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-4 py-2 shadow-sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={prevMonth}
+            className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 p-1"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2 min-w-[180px] justify-center">
+            <CalendarDays className="w-4 h-4 text-slate-400" />
+            <span className="text-base font-semibold text-slate-900">
+              {getMonthNameES(month)} {year}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={nextMonth}
+            className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 p-1"
+            disabled={year >= now.getFullYear() && month >= now.getMonth() + 1}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Month Selector */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={prevMonth}
-          className="text-white/50 hover:text-white"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
-        <h2 className="text-xl font-semibold text-white min-w-[200px] text-center">
-          {getMonthNameES(month)} {year}
-        </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={nextMonth}
-          className="text-white/50 hover:text-white"
-          disabled={year >= now.getFullYear() && month >= now.getMonth() + 1}
-        >
-          <ChevronRight className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* Revenue Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-white/10 bg-gradient-to-br from-green-500/10 to-green-600/5 backdrop-blur-sm">
+      {/* Revenue Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Revenue */}
+        <Card className="border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white/50">Ingresos totales</p>
-                <p className="text-2xl font-bold text-white mt-1">
+                <p className="text-sm font-medium text-slate-500">Ingresos Totales</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">
                   {formatARS(revenue?.totalRevenue ?? 0)}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-green-400" />
+              <div className="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center">
+                <DollarSign className="w-7 h-7 text-green-600" />
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/10 bg-gradient-to-br from-purple-500/10 to-purple-600/5 backdrop-blur-sm">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/50">Turnos completados</p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  {revenue?.completedCount ?? 0}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-400" />
-              </div>
-            </div>
-            <p className="text-xs text-white/30 mt-3">
-              Tasa de completado: {completionRate}%
+            <p className="text-xs text-slate-400 mt-3">
+              Ingresos del mes actual
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-gradient-to-br from-red-500/10 to-red-600/5 backdrop-blur-sm">
+        {/* Completed Appointments */}
+        <Card className="border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white/50">Cancelados</p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  {revenue?.cancelledCount ?? 0}
+                <p className="text-sm font-medium text-slate-500">Turnos Completados</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">
+                  {revenue?.completedCount ?? 0}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
-                <XCircle className="w-6 h-6 text-red-400" />
+              <div className="w-14 h-14 rounded-xl bg-violet-50 flex items-center justify-center">
+                <TrendingUp className="w-7 h-7 text-violet-600" />
               </div>
             </div>
+            <p className="text-xs text-slate-400 mt-3">
+              Tasa de completado: <span className="font-semibold text-green-600">{completionRate}%</span>
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-gradient-to-br from-orange-500/10 to-orange-600/5 backdrop-blur-sm">
+        {/* Cancelled */}
+        <Card className="border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white/50">No asistieron</p>
-                <p className="text-2xl font-bold text-white mt-1">
+                <p className="text-sm font-medium text-slate-500">Cancelados</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">
+                  {revenue?.cancelledCount ?? 0}
+                </p>
+              </div>
+              <div className="w-14 h-14 rounded-xl bg-red-50 flex items-center justify-center">
+                <XCircle className="w-7 h-7 text-red-600" />
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-3">
+              Turnos cancelados
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* No Shows */}
+        <Card className="border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">No Asistieron</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">
                   {revenue?.noShowCount ?? 0}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
-                <UserX className="w-6 h-6 text-orange-400" />
+              <div className="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center">
+                <UserX className="w-7 h-7 text-orange-600" />
               </div>
             </div>
+            <p className="text-xs text-slate-400 mt-3">
+              Clientes sin asistencia
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Service Breakdown */}
-      <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-purple-400" />
-            Desglose por servicio
+      <Card className="border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-4 border-b border-slate-100">
+          <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-violet-600" />
+            Desglose por Servicio
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {breakdown.length === 0 ? (
-            <p className="text-white/30 text-center py-8">
-              No hay datos para este período
-            </p>
+            <div className="text-center py-12">
+              <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500">No hay datos para este período</p>
+            </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {breakdown.map((item, index) => {
                 const maxCount = Math.max(...breakdown.map((b) => b.count));
                 const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
 
                 return (
-                  <div key={item.serviceId} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
+                  <div key={item.serviceId} className="space-y-3">
+                    {/* Service Name & Stats */}
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-white/30 text-xs w-4">
+                        <span className="text-xs font-medium text-slate-400 w-5">
                           #{index + 1}
                         </span>
-                        <span className="font-medium text-white">
+                        <span className="font-semibold text-slate-900 text-base">
                           {item.serviceName}
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="text-white/50">
-                          {item.count} turnos
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-slate-600">
+                          {item.count} turno{item.count !== 1 ? 's' : ''}
                         </span>
-                        <span className="font-bold text-green-400 min-w-[100px] text-right">
+                        <span className="text-base font-bold text-green-600 min-w-[100px] text-right">
                           {formatARS(item.revenue)}
                         </span>
                       </div>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-600 transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -240,6 +263,34 @@ export default function IngresosPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Summary Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="text-center">
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Total Turnos</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{totalAppointments}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Pendientes</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{revenue?.pendingCount ?? 0}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Promedio/Turno</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
+            {totalAppointments > 0 
+              ? formatARS(Math.round((revenue?.totalRevenue ?? 0) / totalAppointments))
+              : formatARS(0)}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Ingresos Día</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
+            {totalAppointments > 0 
+              ? formatARS(Math.round((revenue?.totalRevenue ?? 0) / 30))
+              : formatARS(0)}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
