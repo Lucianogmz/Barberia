@@ -113,12 +113,17 @@ export interface ServiceBreakdown {
   revenue: number;
 }
 
+export interface ShiftRange {
+  start: string;
+  end: string;
+}
+
 export interface ScheduleDay {
   dayOfWeek: number;
   dayName: string;
-  startTime: string;
-  endTime: string;
   isActive: boolean;
+  morning: ShiftRange;
+  afternoon: ShiftRange | null;
 }
 
 /** Register Google tokens and get JWT */

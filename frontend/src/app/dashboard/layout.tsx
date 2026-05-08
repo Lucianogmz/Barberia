@@ -25,14 +25,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [apiToken, setApiToken] = useState<string | null>(null);
 
-  // Redirect to login if not authenticated (skip for /dashboard/login)
   useEffect(() => {
     if (status === 'unauthenticated' && pathname !== '/dashboard/login') {
       router.push('/dashboard/login');
     }
   }, [status, router, pathname]);
 
-  // Register tokens with backend on first load
   useEffect(() => {
     const syncTokens = async () => {
       if (
@@ -70,8 +68,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-black border-t-transparent" />
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-slate-800" />
       </div>
     );
   }
@@ -92,16 +90,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-black flex">
+    <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-white/10 bg-white">
+      <aside className="hidden lg:flex w-64 flex-col bg-white border-r border-slate-200/60 shadow-[4px_0_20px_-2px_rgba(0,0,0,0.04)]">
         <div className="p-6 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center">
-            <Scissors className="w-6 h-6 text-white" />
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-b from-slate-900 to-black flex items-center justify-center shadow-lg shadow-slate-900/20">
+            <Scissors className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-black">Barbería</h1>
-            <p className="text-sm text-black/50">Panel de control</p>
+            <h1 className="text-lg font-semibold text-slate-900">Barbería</h1>
+            <p className="text-sm text-slate-500">Panel de control</p>
           </div>
         </div>
 
@@ -112,10 +110,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               <a
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-medium transition-all
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300
                   ${isActive
-                    ? 'bg-black/10 text-black'
-                    : 'text-black/50 hover:text-black hover:bg-black/5'
+                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
               >
                 <item.icon className="w-5 h-5" />
@@ -125,20 +123,20 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="p-4 border-t border-black/10">
-          <div className="flex items-center gap-3 px-2 mb-4">
+        <div className="p-4 border-t border-slate-100/80">
+          <div className="flex items-center gap-3 px-2 mb-3">
             {session?.user?.image && (
               <img
                 src={session.user.image}
                 alt="Avatar"
-                className="w-10 h-10 rounded-full border-2 border-black"
+                className="w-10 h-10 rounded-full ring-2 ring-slate-200/60"
               />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-base font-medium text-black truncate">
+              <p className="text-sm font-medium text-slate-900 truncate">
                 {session?.user?.name}
               </p>
-              <p className="text-sm text-black/50 truncate">
+              <p className="text-xs text-slate-500 truncate">
                 {session?.user?.email}
               </p>
             </div>
@@ -146,7 +144,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="w-full justify-start text-black/50 hover:text-red-600 hover:bg-red-50"
+            className="w-full justify-start text-slate-500 hover:text-red-600 hover:bg-red-50/80 rounded-xl"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Cerrar sesión
@@ -157,25 +155,25 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar - Mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col border-r border-white/10 bg-white transform transition-transform lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-white border-r border-slate-200/60 shadow-[8px_0_30px_-4px_rgba(0,0,0,0.08)] transform transition-transform duration-300 ease-out lg:hidden ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-slate-900 to-black flex items-center justify-center shadow-lg shadow-slate-900/20">
               <Scissors className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-lg font-bold text-black">Barbería</h1>
+            <h1 className="text-lg font-semibold text-slate-900">Barbería</h1>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="text-black/50">
+          <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -188,10 +186,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300
                   ${isActive
-                    ? 'bg-black/10 text-black'
-                    : 'text-black/50 hover:text-black hover:bg-black/5'
+                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
               >
                 <item.icon className="w-5 h-5" />
@@ -201,11 +199,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="p-4 border-t border-black/10">
+        <div className="p-4 border-t border-slate-100/80">
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="w-full justify-start text-black/50 hover:text-red-600"
+            className="w-full justify-start text-slate-500 hover:text-red-600 hover:bg-red-50/80 rounded-xl"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Cerrar sesión
@@ -216,16 +214,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Mobile header */}
-        <header className="lg:hidden flex items-center justify-between p-4 border-b border-black/10 bg-white">
-          <button onClick={() => setSidebarOpen(true)} className="text-black">
+        <header className="lg:hidden flex items-center justify-between px-5 py-4 bg-white border-b border-slate-100 shadow-sm">
+          <button onClick={() => setSidebarOpen(true)} className="text-slate-700">
             <Menu className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-bold text-black">Barbería</h1>
+          <h1 className="text-lg font-semibold text-slate-900">Barbería</h1>
           <div className="w-6" />
         </header>
 
-        <main className="flex-1 p-6 lg:p-8 overflow-auto bg-gray-50">
-          {/* Pass apiToken through context */}
+        <main className="flex-1 p-6 lg:p-8 overflow-auto bg-slate-50">
           <TokenContext.Provider value={apiToken}>
             {children}
           </TokenContext.Provider>

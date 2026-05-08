@@ -112,6 +112,7 @@
 | 2026-05-07 | Fix servicios usando Barber correcto | Actualizado el controller y servicio de servicios para usar getDefaultBarber() en lugar de req.user.id para consistencia. |
 | 2026-05-07 | Cambio de estética a blanco y negro | Actualizada toda la página a配色 blanco y negro (Helvetica, sidebar, dashboard, página de reserva). Se mantienen colores en sección Ingresos como solicitaste. |
 | 2026-05-07 | Sistema de turnos: 1 por hora, 40 min duración | Modificado el backend para generar slots cada 60 minutos con duración fija de 40 minutos (20 min de buffer entre turnos). |
+| 2026-05-08 | Split shifts (turno partido) | El horario de trabajo ahora soporta dos rangos por día: mañana y tarde. Schema Prisma actualizado con morningStart/morningEnd y afternoonStart/afternoonEnd. El frontend de configuración permite activar/desactivar el turno de tarde. El algoritmo de slots genera horarios dentro de ambos rangos independientes. El buffer de 10 min se aplica dentro de cada rango. |
 
 ---
 

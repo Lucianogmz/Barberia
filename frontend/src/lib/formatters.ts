@@ -125,8 +125,8 @@ export const STATUS_LABELS: Record<string, string> = {
  * Status badge color variants.
  */
 export const STATUS_COLORS: Record<string, string> = {
-  PENDIENTE: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  COMPLETADO: 'bg-green-500/20 text-green-400 border-green-500/30',
-  CANCELADO: 'bg-red-500/20 text-red-400 border-red-500/30',
-  NO_ASISTIO: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  PENDIENTE: 'bg-amber-100 text-amber-700 border-amber-200',
+  COMPLETADO: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  CANCELADO: 'bg-red-100 text-red-700 border-red-200',
+  NO_ASISTIO: 'bg-orange-100 text-orange-700 border-orange-200',
 };

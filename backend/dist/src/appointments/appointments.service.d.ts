@@ -18,6 +18,8 @@ export declare class AppointmentsService {
     private readonly logger;
     constructor(prisma: PrismaService, calendarService: CalendarService, emailService: EmailService, scheduleService: ScheduleService);
     private getDefaultBarber;
+    private toArgentinaISO;
+    private buildRangeBoundaries;
     getAvailableSlots(date: string, serviceId: string): Promise<TimeSlot[]>;
     create(dto: CreateAppointmentDto): Promise<{
         service: {
@@ -34,12 +36,12 @@ export declare class AppointmentsService {
         createdAt: Date;
         updatedAt: Date;
         barberId: string;
-        startTime: Date;
-        endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
         serviceId: string;
+        startTime: Date;
         notes: string | null;
+        endTime: Date;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
     }>;
@@ -61,12 +63,12 @@ export declare class AppointmentsService {
         createdAt: Date;
         updatedAt: Date;
         barberId: string;
-        startTime: Date;
-        endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
         serviceId: string;
+        startTime: Date;
         notes: string | null;
+        endTime: Date;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
     })[]>;
@@ -88,39 +90,12 @@ export declare class AppointmentsService {
         createdAt: Date;
         updatedAt: Date;
         barberId: string;
-        startTime: Date;
-        endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
         serviceId: string;
-        notes: string | null;
-        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
-        googleEventId: string | null;
-    })[]>;
-    findAll(barberId: string, filters?: {
-        date?: string;
-        status?: AppointmentStatus;
-    }): Promise<({
-        service: {
-            name: string;
-            durationMin: number;
-        };
-        client: {
-            email: string;
-            name: string;
-            phone: string;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        barberId: string;
         startTime: Date;
-        endTime: Date;
-        clientId: string;
-        status: import("@prisma/client").$Enums.AppointmentStatus;
-        serviceId: string;
         notes: string | null;
+        endTime: Date;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
     })[]>;
@@ -139,12 +114,12 @@ export declare class AppointmentsService {
         createdAt: Date;
         updatedAt: Date;
         barberId: string;
-        startTime: Date;
-        endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
         serviceId: string;
+        startTime: Date;
         notes: string | null;
+        endTime: Date;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
     }>;
@@ -163,12 +138,12 @@ export declare class AppointmentsService {
         createdAt: Date;
         updatedAt: Date;
         barberId: string;
-        startTime: Date;
-        endTime: Date;
         clientId: string;
         status: import("@prisma/client").$Enums.AppointmentStatus;
         serviceId: string;
+        startTime: Date;
         notes: string | null;
+        endTime: Date;
         priceAtBooking: import("@prisma/client/runtime/library").Decimal;
         googleEventId: string | null;
     }>;

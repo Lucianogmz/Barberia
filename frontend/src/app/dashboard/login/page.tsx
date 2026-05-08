@@ -7,24 +7,23 @@ import { Scissors } from 'lucide-react';
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a1a] via-[#111128] to-[#0a0a1a] flex items-center justify-center p-4">
-      {/* Background decoration */}
+    <div className="min-h-screen bg-slate-100/50 flex items-center justify-center p-4">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-purple-600/5 blur-3xl" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-600/5 blur-3xl" />
+        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-slate-200/40 blur-3xl" />
+        <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-slate-200/30 blur-3xl" />
       </div>
 
-      <Card className="relative z-10 w-full max-w-md border-white/10 bg-white/5 backdrop-blur-xl">
+      <Card className="relative z-10 w-full max-w-md bg-white/80 backdrop-blur-sm border border-slate-200/60 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)]">
         <CardContent className="pt-10 pb-10 text-center space-y-8">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-b from-slate-900 to-black flex items-center justify-center shadow-xl shadow-slate-900/20 border border-white/10">
               <Scissors className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">
+              <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
                 Panel del Barbero
               </h1>
-              <p className="text-white/50 mt-1">
+              <p className="text-slate-500 mt-2">
                 Iniciá sesión con tu cuenta de Google para acceder al panel de
                 control
               </p>
@@ -33,7 +32,7 @@ export default function LoginPage() {
 
           <Button
             onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-            className="w-full bg-white text-gray-900 hover:bg-gray-100 font-medium py-6 text-base"
+            className="w-full bg-white text-slate-900 hover:bg-slate-50 font-medium py-5 text-base border border-slate-200/60 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
               <path
@@ -56,7 +55,7 @@ export default function LoginPage() {
             Iniciar sesión con Google
           </Button>
 
-          <p className="text-xs text-white/20">
+          <p className="text-xs text-slate-400">
             Solo para barberos autorizados
           </p>
         </CardContent>

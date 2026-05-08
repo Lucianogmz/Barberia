@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 
-// Day names in Spanish for reference/display
 export const DAY_NAMES_ES = [
   'Domingo',
   'Lunes',
@@ -13,48 +12,47 @@ export const DAY_NAMES_ES = [
   'Sábado',
 ];
 
+export interface ScheduleDayResponse {
+  dayOfWeek: number;
+  dayName: string;
+  isActive: boolean;
+  morning: { start: string; end: string };
+  afternoon: { start: string; end: string } | null;
+}
+
 @Injectable()
 export class ScheduleService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Get the barber's work schedule for all days.
-   */
-  async getSchedule(barberId: string) {
+  async getSchedule(barberId: string): Promise<ScheduleDayResponse[]> {
     const schedules = await this.prisma.workSchedule.findMany({
       where: { barberId },
       orderBy: { dayOfWeek: 'asc' },
     });
 
-    // Return all 7 days, filling in defaults for missing days
     return Array.from({ length: 7 }, (_, i) => {
       const existing = schedules.find((s) => s.dayOfWeek === i);
       return {
         dayOfWeek: i,
         dayName: DAY_NAMES_ES[i],
-        startTime: existing?.startTime ?? '09:00',
-        endTime: existing?.endTime ?? '19:00',
         isActive: existing?.isActive ?? false,
+        morning: {
+          start: existing?.morningStart ?? '08:00',
+          end: existing?.morningEnd ?? '12:00',
+        },
+        afternoon: existing?.afternoonStart && existing?.afternoonEnd
+          ? { start: existing.afternoonStart, end: existing.afternoonEnd }
+          : null,
       };
     });
   }
 
-  /**
-   * Get the schedule for a specific day of the week.
-   */
   async getScheduleForDay(barberId: string, dayOfWeek: number) {
-    const schedule = await this.prisma.workSchedule.findUnique({
-      where: {
-        barberId_dayOfWeek: { barberId, dayOfWeek },
-      },
+    return this.prisma.workSchedule.findUnique({
+      where: { barberId_dayOfWeek: { barberId, dayOfWeek } },
     });
-
-    return schedule;
   }
 
-  /**
-   * Update the barber's entire work schedule (upsert all 7 days).
-   */
   async updateSchedule(barberId: string, dto: UpdateScheduleDto) {
     const operations = dto.schedule.map((day) =>
       this.prisma.workSchedule.upsert({
@@ -62,36 +60,37 @@ export class ScheduleService {
           barberId_dayOfWeek: { barberId, dayOfWeek: day.dayOfWeek },
         },
         update: {
-          startTime: day.startTime,
-          endTime: day.endTime,
           isActive: day.isActive,
+          morningStart: day.morning.start,
+          morningEnd: day.morning.end,
+          afternoonStart: day.afternoon?.start ?? null,
+          afternoonEnd: day.afternoon?.end ?? null,
         },
         create: {
           barberId,
           dayOfWeek: day.dayOfWeek,
-          startTime: day.startTime,
-          endTime: day.endTime,
           isActive: day.isActive,
+          morningStart: day.morning.start,
+          morningEnd: day.morning.end,
+          afternoonStart: day.afternoon?.start ?? null,
+          afternoonEnd: day.afternoon?.end ?? null,
         },
       }),
     );
 
     await this.prisma.$transaction(operations);
-
     return this.getSchedule(barberId);
   }
 
-  /**
-   * Initialize default schedule for a new barber.
-   * Mon-Sat 09:00-19:00, Sunday off.
-   */
   async initializeDefaultSchedule(barberId: string) {
     const defaults = Array.from({ length: 7 }, (_, i) => ({
       barberId,
       dayOfWeek: i,
-      startTime: '09:00',
-      endTime: '19:00',
-      isActive: i !== 0, // Sunday (0) is off by default
+      isActive: i !== 0,
+      morningStart: '08:00',
+      morningEnd: '12:00',
+      afternoonStart: i >= 1 && i <= 5 ? '17:00' : null,
+      afternoonEnd: i >= 1 && i <= 5 ? '20:00' : null,
     }));
 
     await this.prisma.workSchedule.createMany({

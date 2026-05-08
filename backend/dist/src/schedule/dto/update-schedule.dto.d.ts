@@ -1,8 +1,12 @@
+export declare class ShiftRangeDto {
+    start: string;
+    end: string;
+}
 export declare class ScheduleDayDto {
     dayOfWeek: number;
-    startTime: string;
-    endTime: string;
     isActive: boolean;
+    morning: ShiftRangeDto;
+    afternoon?: ShiftRangeDto | null;
 }
 export declare class UpdateScheduleDto {
     schedule: ScheduleDayDto[];

@@ -9,14 +9,35 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateScheduleDto = exports.ScheduleDayDto = void 0;
+exports.UpdateScheduleDto = exports.ScheduleDayDto = exports.ShiftRangeDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
+class ShiftRangeDto {
+    start;
+    end;
+}
+exports.ShiftRangeDto = ShiftRangeDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.Matches)(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+        message: 'Must be in HH:mm format',
+    }),
+    __metadata("design:type", String)
+], ShiftRangeDto.prototype, "start", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.Matches)(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+        message: 'Must be in HH:mm format',
+    }),
+    __metadata("design:type", String)
+], ShiftRangeDto.prototype, "end", void 0);
 class ScheduleDayDto {
     dayOfWeek;
-    startTime;
-    endTime;
     isActive;
+    morning;
+    afternoon;
 }
 exports.ScheduleDayDto = ScheduleDayDto;
 __decorate([
@@ -26,23 +47,20 @@ __decorate([
     __metadata("design:type", Number)
 ], ScheduleDayDto.prototype, "dayOfWeek", void 0);
 __decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.Matches)(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-        message: 'startTime must be in HH:mm format',
-    }),
-    __metadata("design:type", String)
-], ScheduleDayDto.prototype, "startTime", void 0);
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.Matches)(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-        message: 'endTime must be in HH:mm format',
-    }),
-    __metadata("design:type", String)
-], ScheduleDayDto.prototype, "endTime", void 0);
-__decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], ScheduleDayDto.prototype, "isActive", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => ShiftRangeDto),
+    __metadata("design:type", ShiftRangeDto)
+], ScheduleDayDto.prototype, "morning", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => ShiftRangeDto),
+    __metadata("design:type", Object)
+], ScheduleDayDto.prototype, "afternoon", void 0);
 class UpdateScheduleDto {
     schedule;
 }

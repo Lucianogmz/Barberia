@@ -36,7 +36,6 @@ type BookingStep = 'service' | 'datetime' | 'info' | 'confirmation';
 export default function BookingPage() {
   const router = useRouter();
 
-  // Booking state
   const [step, setStep] = useState<BookingStep>('service');
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -49,14 +48,12 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
 
-  // Load services on mount
   useEffect(() => {
     getServices()
       .then(setServices)
       .catch(() => toast.error('Error al cargar los servicios'));
   }, []);
 
-  // Load available slots when date or service changes
   useEffect(() => {
     if (selectedDate && selectedService) {
       setSlotsLoading(true);
@@ -71,7 +68,6 @@ export default function BookingPage() {
     }
   }, [selectedDate, selectedService]);
 
-  // Submit booking
   const handleSubmit = async () => {
     if (!selectedService || !selectedSlot) return;
 
@@ -94,7 +90,6 @@ export default function BookingPage() {
     }
   };
 
-  // Reset booking
   const resetBooking = () => {
     setStep('service');
     setSelectedService(null);
@@ -108,48 +103,44 @@ export default function BookingPage() {
   const availableCount = availableSlots.filter((s) => s.available).length;
 
   return (
-<div className="min-h-screen bg-white relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-black/5 blur-3xl" />
-      <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-black/5 blur-3xl" />
+    <div className="min-h-screen bg-slate-50 relative">
+      <div className="absolute top-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-slate-100/50 to-slate-200/30 blur-3xl" />
+      <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-gradient-to-tl from-slate-200/40 to-slate-100/30 blur-3xl" />
 
-      {/* Header */}
-      <header className="relative z-10 border-b border-black/5 backdrop-blur-sm">
-        <div className="max-w-3xl mx-auto px-4 py-6 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
-            <Scissors className="w-5 h-5 text-black" />
+      <header className="relative z-10 bg-white/80 backdrop-blur-sm border-b border-slate-200/60 shadow-sm">
+        <div className="max-w-3xl mx-auto px-5 py-5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-slate-900 to-black flex items-center justify-center shadow-lg shadow-slate-900/20">
+            <Scissors className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-black">Barbería</h1>
-            <p className="text-sm text-black/40">Reservá tu turno online</p>
+            <h1 className="text-lg font-semibold text-slate-900 tracking-tight">Barbería</h1>
+            <p className="text-sm text-slate-500">Reservá tu turno online</p>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="relative z-10 max-w-3xl mx-auto px-4 py-8">
-        {/* Progress Steps */}
+      <main className="relative z-10 max-w-3xl mx-auto px-4 py-10">
         {step !== 'confirmation' && (
-          <div className="flex items-center justify-center gap-2 mb-8">
+          <div className="flex items-center justify-center gap-3 mb-10">
             {['service', 'datetime', 'info'].map((s, i) => (
-              <div key={s} className="flex items-center gap-2">
+              <div key={s} className="flex items-center gap-3">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300
                     ${step === s
-                      ? 'bg-purple-500 text-black scale-110'
+                      ? 'bg-gradient-to-b from-slate-900 to-black text-white shadow-lg shadow-slate-900/30 ring-1 ring-inset ring-white/10'
                       : ['service', 'datetime', 'info'].indexOf(step) > i
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-black/5 text-black/30 border border-black/10'
+                      ? 'bg-slate-200/60 text-slate-600 border border-slate-300/50'
+                      : 'bg-slate-100 text-slate-400 border border-slate-200/60'
                     }`}
                 >
                   {i + 1}
                 </div>
                 {i < 2 && (
                   <div
-                    className={`w-12 h-0.5 transition-all ${
+                    className={`w-14 h-0.5 rounded-full transition-all duration-500 ${
                       ['service', 'datetime', 'info'].indexOf(step) > i
-                        ? 'bg-purple-500/50'
-                        : 'bg-black/10'
+                        ? 'bg-slate-400'
+                        : 'bg-slate-200'
                     }`}
                   />
                 )}
@@ -158,14 +149,13 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 1: Service Selection */}
         {step === 'service' && (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-black mb-2">
+              <h2 className="text-2xl font-semibold text-slate-900 mb-2 tracking-tight">
                 Elegí tu servicio
               </h2>
-              <p className="text-black/50">
+              <p className="text-slate-500">
                 Seleccioná el servicio que necesitás
               </p>
             </div>
@@ -174,10 +164,10 @@ export default function BookingPage() {
               {services.map((service) => (
                 <Card
                   key={service.id}
-                  className={`cursor-pointer transition-all duration-200 hover:scale-[1.02] border-black/20 bg-white shadow-sm
+                  className={`cursor-pointer transition-all duration-300 hover:shadow-[0_4px_20px_-3px_rgba(0,0,0,0.1),0_12px_25px_-2px_rgba(0,0,0,0.06)] border-slate-200/60 bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]
                     ${selectedService?.id === service.id
-                      ? 'ring-2 ring-purple-500 border-purple-500/50 bg-purple-500/10'
-                      : 'hover:border-black/20 hover:bg-black/8'
+                      ? 'ring-2 ring-slate-900/20 border-slate-300/80 bg-slate-50/50'
+                      : 'hover:border-slate-300/80'
                     }`}
                   onClick={() => {
                     setSelectedService(service);
@@ -186,36 +176,36 @@ export default function BookingPage() {
                 >
                   <CardContent className="flex items-center justify-between p-5">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-all duration-300
                         ${selectedService?.id === service.id
-                          ? 'bg-purple-500/20'
-                          : 'bg-black/5'
+                          ? 'bg-slate-900/10 border-slate-300/50'
+                          : 'bg-slate-100/80 border-slate-200/60'
                         }`}
                       >
                         <Scissors className={`w-5 h-5 ${
                           selectedService?.id === service.id
-                            ? 'text-purple-400'
-                            : 'text-black/40'
+                            ? 'text-slate-900'
+                            : 'text-slate-500'
                         }`} />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-black text-lg">
+                        <h3 className="font-medium text-slate-900 text-lg tracking-tight">
                           {service.name}
                         </h3>
                         {service.description && (
-                          <p className="text-sm text-black/40">
+                          <p className="text-sm text-slate-500 mt-0.5">
                             {service.description}
                           </p>
                         )}
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="flex items-center gap-1 text-sm text-black/50">
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="flex items-center gap-1.5 text-sm text-slate-500">
                             <Clock className="w-3.5 h-3.5" />
                             {service.durationMin} min
                           </span>
                         </div>
                       </div>
                     </div>
-                    <span className="text-xl font-bold text-purple-400">
+                    <span className="text-xl font-semibold text-slate-900 tracking-tight">
                       {formatARS(service.price)}
                     </span>
                   </CardContent>
@@ -225,7 +215,6 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 2: Date & Time Selection */}
         {step === 'datetime' && (
           <div className="space-y-6">
             <div className="flex items-center gap-4 mb-6">
@@ -233,27 +222,26 @@ export default function BookingPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setStep('service')}
-                className="text-black/50 hover:text-black"
+                className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 Volver
               </Button>
               <div>
-                <h2 className="text-2xl font-bold text-black">
+                <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">
                   Elegí fecha y hora
                 </h2>
-                <p className="text-black/50">
+                <p className="text-slate-500">
                   {selectedService?.name} — {selectedService?.durationMin} min
                 </p>
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Calendar */}
-              <Card className="border-black/20 bg-white">
+            <div className="grid md:grid-cols-2 gap-5">
+              <Card className="border-slate-200/60 bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
                 <CardHeader>
-                  <CardTitle className="text-black text-base flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-purple-400" />
+                  <CardTitle className="text-slate-900 text-base font-medium flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-slate-500" />
                     Fecha
                   </CardTitle>
                 </CardHeader>
@@ -269,19 +257,18 @@ export default function BookingPage() {
                       maxDate.setDate(maxDate.getDate() + 30);
                       return date < today || date > maxDate || date.getDay() === 0;
                     }}
-                    className="rounded-md"
+                    className="rounded-xl"
                   />
                 </CardContent>
               </Card>
 
-              {/* Time Slots */}
-              <Card className="border-black/20 bg-white">
+              <Card className="border-slate-200/60 bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
                 <CardHeader>
-                  <CardTitle className="text-black text-base flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-purple-400" />
+                  <CardTitle className="text-slate-900 text-base font-medium flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-slate-500" />
                     Horarios disponibles
                     {selectedDate && !slotsLoading && (
-                      <Badge variant="secondary" className="ml-auto bg-black/10 text-black/60">
+                      <Badge variant="secondary" className="ml-auto bg-slate-100 text-slate-600 border border-slate-200/60 text-xs font-medium">
                         {availableCount} disponibles
                       </Badge>
                     )}
@@ -289,29 +276,29 @@ export default function BookingPage() {
                 </CardHeader>
                 <CardContent>
                   {!selectedDate ? (
-                    <p className="text-black/30 text-sm text-center py-8">
+                    <p className="text-slate-400 text-sm text-center py-10">
                       Seleccioná una fecha para ver los horarios
                     </p>
                   ) : slotsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
                     </div>
                   ) : availableCount === 0 ? (
-                    <p className="text-black/30 text-sm text-center py-8">
+                    <p className="text-slate-400 text-sm text-center py-10">
                       No hay horarios disponibles para esta fecha
                     </p>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-3 gap-2 max-h-[280px] overflow-y-auto pr-1">
                       {availableSlots
                         .filter((slot) => slot.available)
                         .map((slot) => (
                           <button
                             key={slot.startTime}
                             onClick={() => setSelectedSlot(slot)}
-                            className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 border
                               ${selectedSlot?.startTime === slot.startTime
-                                ? 'bg-purple-500 text-black ring-2 ring-purple-400/50'
-                                : 'bg-black/5 text-black/70 hover:bg-black/10 hover:text-black border border-black/10'
+                                ? 'bg-gradient-to-b from-slate-900 to-black text-white shadow-lg shadow-slate-900/30 border-slate-800'
+                                : 'bg-slate-50/80 text-slate-700 hover:bg-slate-100 hover:border-slate-300/80 border-slate-200/60'
                               }`}
                           >
                             {formatTimeES(slot.startTime)}
@@ -327,7 +314,7 @@ export default function BookingPage() {
               <div className="flex justify-end pt-4">
                 <Button
                   onClick={() => setStep('info')}
-                  className="bg-black hover:bg-black/80 text-white px-8"
+                  className="bg-gradient-to-b from-slate-900 to-black text-white shadow-lg shadow-slate-900/20 hover:from-slate-800 hover:to-black hover:shadow-xl hover:shadow-slate-900/30 border border-white/10 ring-1 ring-inset ring-white/5 rounded-xl px-6"
                 >
                   Continuar
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -337,7 +324,6 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 3: Client Information */}
         {step === 'info' && (
           <div className="space-y-6">
             <div className="flex items-center gap-4 mb-6">
@@ -345,25 +331,24 @@ export default function BookingPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setStep('datetime')}
-                className="text-black/50 hover:text-black"
+                className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 Volver
               </Button>
               <div>
-                <h2 className="text-2xl font-bold text-black">Tus datos</h2>
-                <p className="text-black/50">
+                <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Tus datos</h2>
+                <p className="text-slate-500">
                   Completá tus datos para confirmar el turno
                 </p>
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Guest Form */}
-              <Card className="border-black/20 bg-white">
+            <div className="grid md:grid-cols-2 gap-5">
+              <Card className="border-slate-200/60 bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
                 <CardContent className="pt-6 space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-black/70 flex items-center gap-2">
+                    <Label htmlFor="name" className="text-slate-600 text-sm font-medium flex items-center gap-2">
                       <User className="w-4 h-4" /> Nombre completo
                     </Label>
                     <Input
@@ -371,11 +356,11 @@ export default function BookingPage() {
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="Juan Pérez"
-                      className="bg-white border-black/20 text-black placeholder:text-black/30"
+                      className="bg-white/80 border-slate-200/60 text-slate-900 placeholder:text-slate-400/60 rounded-xl"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-black/70 flex items-center gap-2">
+                    <Label htmlFor="phone" className="text-slate-600 text-sm font-medium flex items-center gap-2">
                       <Phone className="w-4 h-4" /> Teléfono
                     </Label>
                     <Input
@@ -383,11 +368,11 @@ export default function BookingPage() {
                       value={clientPhone}
                       onChange={(e) => setClientPhone(e.target.value)}
                       placeholder="11 2345-6789"
-                      className="bg-white border-black/20 text-black placeholder:text-black/30"
+                      className="bg-white/80 border-slate-200/60 text-slate-900 placeholder:text-slate-400/60 rounded-xl"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-black/70 flex items-center gap-2">
+                    <Label htmlFor="email" className="text-slate-600 text-sm font-medium flex items-center gap-2">
                       <Mail className="w-4 h-4" /> Email
                     </Label>
                     <Input
@@ -396,54 +381,53 @@ export default function BookingPage() {
                       value={clientEmail}
                       onChange={(e) => setClientEmail(e.target.value)}
                       placeholder="juan@email.com"
-                      className="bg-white border-black/20 text-black placeholder:text-black/30"
+                      className="bg-white/80 border-slate-200/60 text-slate-900 placeholder:text-slate-400/60 rounded-xl"
                     />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Booking Summary */}
-              <Card className="border-black/20 bg-white">
+              <Card className="border-slate-200/60 bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
                 <CardHeader>
-                  <CardTitle className="text-black text-base">
+                  <CardTitle className="text-slate-900 text-base font-medium">
                     Resumen de tu turno
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-black/50">Servicio</span>
-                      <span className="text-black font-medium">
+                      <span className="text-slate-500">Servicio</span>
+                      <span className="text-slate-900 font-medium">
                         {selectedService?.name}
                       </span>
                     </div>
-                    <Separator className="bg-black/10" />
+                    <Separator className="bg-slate-100/80" />
                     <div className="flex justify-between text-sm">
-                      <span className="text-black/50">Fecha</span>
-                      <span className="text-black font-medium">
+                      <span className="text-slate-500">Fecha</span>
+                      <span className="text-slate-900 font-medium">
                         {selectedDate && formatDateES(selectedDate)}
                       </span>
                     </div>
-                    <Separator className="bg-black/10" />
+                    <Separator className="bg-slate-100/80" />
                     <div className="flex justify-between text-sm">
-                      <span className="text-black/50">Horario</span>
-                      <span className="text-black font-medium">
+                      <span className="text-slate-500">Horario</span>
+                      <span className="text-slate-900 font-medium">
                         {selectedSlot && formatTimeES(selectedSlot.startTime)}
                         {' — '}
                         {selectedSlot && formatTimeES(selectedSlot.endTime)}
                       </span>
                     </div>
-                    <Separator className="bg-black/10" />
+                    <Separator className="bg-slate-100/80" />
                     <div className="flex justify-between text-sm">
-                      <span className="text-black/50">Duración</span>
-                      <span className="text-black font-medium">
+                      <span className="text-slate-500">Duración</span>
+                      <span className="text-slate-900 font-medium">
                         {selectedService?.durationMin} minutos
                       </span>
                     </div>
-                    <Separator className="bg-black/10" />
+                    <Separator className="bg-slate-100/80" />
                     <div className="flex justify-between items-center pt-2">
-                      <span className="text-black/70 font-medium">Total</span>
-                      <span className="text-2xl font-bold text-purple-400">
+                      <span className="text-slate-700 font-medium">Total</span>
+                      <span className="text-2xl font-semibold text-slate-900 tracking-tight">
                         {selectedService && formatARS(selectedService.price)}
                       </span>
                     </div>
@@ -456,7 +440,7 @@ export default function BookingPage() {
               <Button
                 onClick={handleSubmit}
                 disabled={!clientName || !clientPhone || !clientEmail || loading}
-                className="bg-purple-600 hover:bg-purple-700 text-black px-8 disabled:opacity-50"
+                className="bg-gradient-to-b from-slate-900 to-black text-white shadow-lg shadow-slate-900/20 hover:from-slate-800 hover:to-black hover:shadow-xl hover:shadow-slate-900/30 border border-white/10 ring-1 ring-inset ring-white/5 rounded-xl px-8 disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -469,39 +453,38 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 4: Confirmation */}
         {step === 'confirmation' && (
           <div className="text-center py-16 space-y-6">
-            <div className="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center mb-6">
-              <CheckCircle2 className="w-10 h-10 text-green-400" />
+            <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 flex items-center justify-center mb-6 border border-emerald-100/60 shadow-lg shadow-emerald-500/10">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h2 className="text-3xl font-bold text-black">
+            <h2 className="text-3xl font-semibold text-slate-900 tracking-tight">
               ¡Turno confirmado!
             </h2>
-            <p className="text-black/50 max-w-md mx-auto">
+            <p className="text-slate-500 max-w-md mx-auto">
               Tu turno ha sido reservado con éxito. Te enviamos un email de
               confirmación con los detalles.
             </p>
 
-            <Card className="max-w-sm mx-auto border-black/10 bg-black/5 backdrop-blur-sm">
+            <Card className="max-w-sm mx-auto border-slate-200/60 bg-slate-50/50 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
               <CardContent className="pt-6 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-black/50">Servicio</span>
-                  <span className="text-black font-medium">
+                  <span className="text-slate-500">Servicio</span>
+                  <span className="text-slate-900 font-medium">
                     {selectedService?.name}
                   </span>
                 </div>
-                <Separator className="bg-black/10" />
+                <Separator className="bg-slate-100/80" />
                 <div className="flex justify-between text-sm">
-                  <span className="text-black/50">Fecha</span>
-                  <span className="text-black font-medium">
+                  <span className="text-slate-500">Fecha</span>
+                  <span className="text-slate-900 font-medium">
                     {selectedDate && formatDateES(selectedDate)}
                   </span>
                 </div>
-                <Separator className="bg-black/10" />
+                <Separator className="bg-slate-100/80" />
                 <div className="flex justify-between text-sm">
-                  <span className="text-black/50">Hora</span>
-                  <span className="text-black font-medium">
+                  <span className="text-slate-500">Hora</span>
+                  <span className="text-slate-900 font-medium">
                     {selectedSlot && formatTimeES(selectedSlot.startTime)}
                   </span>
                 </div>
@@ -511,7 +494,7 @@ export default function BookingPage() {
             <Button
               onClick={resetBooking}
               variant="outline"
-              className="mt-8 border-black/20 text-black hover:bg-black/10"
+              className="mt-8 border-slate-200/60 text-slate-700 hover:bg-slate-100 hover:border-slate-300/80 rounded-xl"
             >
               Reservar otro turno
             </Button>
@@ -519,10 +502,9 @@ export default function BookingPage() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-black/5 mt-16">
+      <footer className="relative z-10 border-t border-slate-200/60 mt-16 bg-white/50 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-6 text-center">
-          <p className="text-sm text-black/20">
+          <p className="text-sm text-slate-400">
             © {new Date().getFullYear()} Barbería — Todos los derechos reservados
           </p>
         </div>

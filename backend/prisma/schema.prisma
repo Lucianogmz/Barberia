@@ -128,14 +128,20 @@ enum AppointmentStatus {
 }
 
 // ============================================
-// WORK SCHEDULE — Barber's working hours per day
+// WORK SCHEDULE — Barber's working hours per day (supports split shifts)
 // ============================================
 model WorkSchedule {
   id          String   @id @default(cuid())
   dayOfWeek   Int      // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
-  startTime   String   // "09:00" (HH:mm format, in America/Argentina/Buenos_Aires)
-  endTime     String   // "19:00"
   isActive    Boolean  @default(true) // false = day off
+
+  // Morning shift (always active if day isActive = true)
+  morningStart String  // "08:00" (HH:mm, America/Argentina/Buenos_Aires)
+  morningEnd   String  // "12:00"
+
+  // Afternoon shift (optional — null means single shift)
+  afternoonStart String? // "17:00" — null = no afternoon shift
+  afternoonEnd   String? // "20:00"
 
   // Relations
   barberId    String

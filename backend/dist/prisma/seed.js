@@ -55,13 +55,13 @@ async function main() {
         console.log(`  ✅ Service: ${service.name} — $${service.price}`);
     }
     const days = [
-        { dayOfWeek: 0, startTime: '09:00', endTime: '19:00', isActive: false },
-        { dayOfWeek: 1, startTime: '09:00', endTime: '19:00', isActive: true },
-        { dayOfWeek: 2, startTime: '09:00', endTime: '19:00', isActive: true },
-        { dayOfWeek: 3, startTime: '09:00', endTime: '19:00', isActive: true },
-        { dayOfWeek: 4, startTime: '09:00', endTime: '19:00', isActive: true },
-        { dayOfWeek: 5, startTime: '09:00', endTime: '19:00', isActive: true },
-        { dayOfWeek: 6, startTime: '09:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 0, isActive: false, morningStart: '08:00', morningEnd: '12:00', afternoonStart: null, afternoonEnd: null },
+        { dayOfWeek: 1, isActive: true, morningStart: '08:00', morningEnd: '12:00', afternoonStart: '17:00', afternoonEnd: '20:00' },
+        { dayOfWeek: 2, isActive: true, morningStart: '08:00', morningEnd: '12:00', afternoonStart: '17:00', afternoonEnd: '20:00' },
+        { dayOfWeek: 3, isActive: true, morningStart: '08:00', morningEnd: '12:00', afternoonStart: '17:00', afternoonEnd: '20:00' },
+        { dayOfWeek: 4, isActive: true, morningStart: '08:00', morningEnd: '12:00', afternoonStart: '17:00', afternoonEnd: '20:00' },
+        { dayOfWeek: 5, isActive: true, morningStart: '08:00', morningEnd: '12:00', afternoonStart: '17:00', afternoonEnd: '20:00' },
+        { dayOfWeek: 6, isActive: true, morningStart: '08:00', morningEnd: '12:00', afternoonStart: null, afternoonEnd: null },
     ];
     for (const day of days) {
         await prisma.workSchedule.upsert({
@@ -78,7 +78,7 @@ async function main() {
             },
         });
     }
-    console.log('  ✅ Work schedule created (Lun-Vie 09-19, Sáb 09-14, Dom cerrado)');
+    console.log('  ✅ Work schedule created (Lun-Vie 08-12 y 17-20, Sáb 08-12, Dom cerrado)');
     console.log('🎉 Seeding complete!');
 }
 main()

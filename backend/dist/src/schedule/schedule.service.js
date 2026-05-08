@@ -36,19 +36,21 @@ let ScheduleService = class ScheduleService {
             return {
                 dayOfWeek: i,
                 dayName: exports.DAY_NAMES_ES[i],
-                startTime: existing?.startTime ?? '09:00',
-                endTime: existing?.endTime ?? '19:00',
                 isActive: existing?.isActive ?? false,
+                morning: {
+                    start: existing?.morningStart ?? '08:00',
+                    end: existing?.morningEnd ?? '12:00',
+                },
+                afternoon: existing?.afternoonStart && existing?.afternoonEnd
+                    ? { start: existing.afternoonStart, end: existing.afternoonEnd }
+                    : null,
             };
         });
     }
     async getScheduleForDay(barberId, dayOfWeek) {
-        const schedule = await this.prisma.workSchedule.findUnique({
-            where: {
-                barberId_dayOfWeek: { barberId, dayOfWeek },
-            },
+        return this.prisma.workSchedule.findUnique({
+            where: { barberId_dayOfWeek: { barberId, dayOfWeek } },
         });
-        return schedule;
     }
     async updateSchedule(barberId, dto) {
         const operations = dto.schedule.map((day) => this.prisma.workSchedule.upsert({
@@ -56,16 +58,20 @@ let ScheduleService = class ScheduleService {
                 barberId_dayOfWeek: { barberId, dayOfWeek: day.dayOfWeek },
             },
             update: {
-                startTime: day.startTime,
-                endTime: day.endTime,
                 isActive: day.isActive,
+                morningStart: day.morning.start,
+                morningEnd: day.morning.end,
+                afternoonStart: day.afternoon?.start ?? null,
+                afternoonEnd: day.afternoon?.end ?? null,
             },
             create: {
                 barberId,
                 dayOfWeek: day.dayOfWeek,
-                startTime: day.startTime,
-                endTime: day.endTime,
                 isActive: day.isActive,
+                morningStart: day.morning.start,
+                morningEnd: day.morning.end,
+                afternoonStart: day.afternoon?.start ?? null,
+                afternoonEnd: day.afternoon?.end ?? null,
             },
         }));
         await this.prisma.$transaction(operations);
@@ -75,9 +81,11 @@ let ScheduleService = class ScheduleService {
         const defaults = Array.from({ length: 7 }, (_, i) => ({
             barberId,
             dayOfWeek: i,
-            startTime: '09:00',
-            endTime: '19:00',
             isActive: i !== 0,
+            morningStart: '08:00',
+            morningEnd: '12:00',
+            afternoonStart: i >= 1 && i <= 5 ? '17:00' : null,
+            afternoonEnd: i >= 1 && i <= 5 ? '20:00' : null,
         }));
         await this.prisma.workSchedule.createMany({
             data: defaults,

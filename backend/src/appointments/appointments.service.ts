@@ -12,16 +12,14 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { AppointmentStatus } from '@prisma/client';
 
-// 10-minute buffer between appointments
 const BUFFER_MINUTES = 10;
-// Fixed slot interval: 1 turn per hour
 const SLOT_INTERVAL_MINUTES = 60;
-// Fixed appointment duration: 40 minutes
 const APPOINTMENT_DURATION_MINUTES = 40;
+const TZ_OFFSET_MS = -3 * 60 * 60 * 1000;
 
 export interface TimeSlot {
-  startTime: string; // ISO string
-  endTime: string; // ISO string
+  startTime: string;
+  endTime: string;
   available: boolean;
 }
 
@@ -36,10 +34,6 @@ export class AppointmentsService {
     private readonly scheduleService: ScheduleService,
   ) {}
 
-  /**
-   * Get the first barber (single-barber V1).
-   * In multi-barber V2, this would accept a barberId parameter.
-   */
   private async getDefaultBarber() {
     const barber = await this.prisma.user.findFirst({
       where: { role: 'BARBER' },
@@ -52,14 +46,65 @@ export class AppointmentsService {
     return barber;
   }
 
-  /**
-   * Calculate available time slots for a given date and service.
-   * Algorithm: WorkSchedule slots - existing appointments - Google Calendar busy times
-   */
-  async getAvailableSlots(
-    date: string,
-    serviceId: string,
-  ): Promise<TimeSlot[]> {
+  private toArgentinaISO(date: Date): string {
+    const argentinaTime = new Date(date.getTime() + TZ_OFFSET_MS);
+    return argentinaTime.toISOString().replace('Z', '-03:00');
+  }
+
+  private buildRangeBoundaries(
+    targetDate: Date,
+    morningStart: string,
+    morningEnd: string,
+    afternoonStart: string | null,
+    afternoonEnd: string | null,
+  ) {
+    const parseHHMM = (str: string, base: Date) => {
+      const [h, m] = str.split(':').map(Number);
+      const d = new Date(base);
+      d.setHours(h, m, 0, 0);
+      return d;
+    };
+
+    const morningStartTime = parseHHMM(morningStart, targetDate);
+    const morningEndTime = parseHHMM(morningEnd, targetDate);
+    const afternoonStartTime = afternoonStart
+      ? parseHHMM(afternoonStart, targetDate)
+      : null;
+    const afternoonEndTime = afternoonEnd ? parseHHMM(afternoonEnd, targetDate) : null;
+
+    const toUTC = (d: Date) => new Date(d.getTime() - TZ_OFFSET_MS);
+
+    return {
+      ranges: [
+        {
+          localStart: morningStartTime,
+          localEnd: morningEndTime,
+          utcStart: toUTC(morningStartTime),
+          utcEnd: toUTC(morningEndTime),
+        },
+        afternoonStartTime && afternoonEndTime
+          ? {
+              localStart: afternoonStartTime,
+              localEnd: afternoonEndTime,
+              utcStart: toUTC(afternoonStartTime),
+              utcEnd: toUTC(afternoonEndTime),
+            }
+          : null,
+      ].filter(Boolean) as {
+        localStart: Date;
+        localEnd: Date;
+        utcStart: Date;
+        utcEnd: Date;
+      }[],
+      allUtcStart: toUTC(
+        afternoonEndTime && afternoonStartTime
+          ? afternoonEndTime
+          : morningEndTime,
+      ),
+    };
+  }
+
+  async getAvailableSlots(date: string, serviceId: string): Promise<TimeSlot[]> {
     const barber = await this.getDefaultBarber();
     const service = await this.prisma.service.findUnique({
       where: { id: serviceId },
@@ -69,112 +114,86 @@ export class AppointmentsService {
       throw new NotFoundException('Servicio no encontrado');
     }
 
-    // Parse the target date in Argentina timezone
     const targetDate = new Date(date + 'T00:00:00-03:00');
-    const dayOfWeek = targetDate.getDay(); // 0=Sunday, 6=Saturday
+    const dayOfWeek = targetDate.getDay();
 
-    // Get work schedule for this day
     const schedule = await this.scheduleService.getScheduleForDay(
       barber.id,
       dayOfWeek,
     );
 
     if (!schedule || !schedule.isActive) {
-      return []; // Day off — no slots available
+      return [];
     }
 
-    // Build the day boundaries in Argentina time
-    const [startH, startM] = schedule.startTime.split(':').map(Number);
-    const [endH, endM] = schedule.endTime.split(':').map(Number);
+    const { ranges, allUtcStart } = this.buildRangeBoundaries(
+      targetDate,
+      schedule.morningStart,
+      schedule.morningEnd,
+      schedule.afternoonStart,
+      schedule.afternoonEnd,
+    );
 
-    const dayStart = new Date(targetDate);
-    dayStart.setHours(startH, startM, 0, 0);
-
-    const dayEnd = new Date(targetDate);
-    dayEnd.setHours(endH, endM, 0, 0);
-
-    // Convert to UTC for DB/Calendar queries
-    // Argentina is UTC-3
-    const dayStartUTC = new Date(dayStart.getTime() + 3 * 60 * 60 * 1000);
-    const dayEndUTC = new Date(dayEnd.getTime() + 3 * 60 * 60 * 1000);
-
-    // Get existing appointments for this day (only PENDIENTE — not cancelled)
     const existingAppointments = await this.prisma.appointment.findMany({
       where: {
         barberId: barber.id,
         status: { in: ['PENDIENTE', 'COMPLETADO'] },
-        startTime: { gte: dayStartUTC },
-        endTime: { lte: dayEndUTC },
+        startTime: { gte: ranges[0].utcStart },
+        endTime: { lte: allUtcStart },
       },
       select: { startTime: true, endTime: true },
     });
 
-    // Get Google Calendar busy times
     const busyIntervals = await this.calendarService.getBusyIntervals(
       barber.id,
-      dayStartUTC,
-      dayEndUTC,
+      ranges[0].utcStart,
+      allUtcStart,
     );
 
-    // Merge all busy intervals (appointments + Google Calendar)
     const allBusyIntervals = [
       ...existingAppointments.map((a) => ({
         start: a.startTime,
-        // Add buffer time after each appointment
         end: new Date(a.endTime.getTime() + BUFFER_MINUTES * 60 * 1000),
       })),
       ...busyIntervals,
     ];
 
-    // Generate possible slots - ONE per hour, fixed 40 min duration
     const slots: TimeSlot[] = [];
-    const slotInterval = SLOT_INTERVAL_MINUTES * 60 * 1000; // 60 min between slots
-    const appointmentDuration = APPOINTMENT_DURATION_MINUTES * 60 * 1000; // 40 min actual duration
+    const slotInterval = SLOT_INTERVAL_MINUTES * 60 * 1000;
+    const appointmentDuration = APPOINTMENT_DURATION_MINUTES * 60 * 1000;
     const now = new Date();
 
-    // Use Argentina timezone for slot times (UTC-3)
-    const toArgentinaISO = (date: Date): string => {
-      const tzOffset = -3 * 60 * 60 * 1000; // Argentina UTC-3
-      const argentinaTime = new Date(date.getTime() + tzOffset);
-      return argentinaTime.toISOString().replace('Z', '-03:00');
-    };
+    for (const range of ranges) {
+      let currentSlotStart = range.utcStart;
 
-    let currentSlotStart = dayStartUTC;
+      while (currentSlotStart.getTime() + appointmentDuration <= range.utcEnd.getTime()) {
+        const currentSlotEnd = new Date(
+          currentSlotStart.getTime() + appointmentDuration,
+        );
 
-    while (currentSlotStart.getTime() + appointmentDuration <= dayEndUTC.getTime()) {
-      const currentSlotEnd = new Date(
-        currentSlotStart.getTime() + appointmentDuration,
-      );
+        const isConflicting = allBusyIntervals.some(
+          (busy) =>
+            currentSlotStart < busy.end && currentSlotEnd > busy.start,
+        );
 
-      // Check if this slot overlaps with any busy interval
-      const isConflicting = allBusyIntervals.some(
-        (busy) =>
-          currentSlotStart < busy.end && currentSlotEnd > busy.start,
-      );
+        const isPast = currentSlotStart <= now;
 
-      // Check if slot is in the past
-      const isPast = currentSlotStart <= now;
+        slots.push({
+          startTime: this.toArgentinaISO(currentSlotStart),
+          endTime: this.toArgentinaISO(currentSlotEnd),
+          available: !isConflicting && !isPast,
+        });
 
-      slots.push({
-        startTime: toArgentinaISO(currentSlotStart),
-        endTime: toArgentinaISO(currentSlotEnd),
-        available: !isConflicting && !isPast,
-      });
-
-      // Move to next slot (60 min interval)
-      currentSlotStart = new Date(currentSlotStart.getTime() + slotInterval);
+        currentSlotStart = new Date(currentSlotStart.getTime() + slotInterval);
+      }
     }
 
     return slots;
   }
 
-  /**
-   * Create a new appointment (public — guest booking).
-   */
   async create(dto: CreateAppointmentDto) {
     const barber = await this.getDefaultBarber();
 
-    // Verify service exists and is active
     const service = await this.prisma.service.findFirst({
       where: { id: dto.serviceId, isActive: true },
     });
@@ -188,7 +207,6 @@ export class AppointmentsService {
       startTime.getTime() + APPOINTMENT_DURATION_MINUTES * 60 * 1000,
     );
 
-    // Verify slot is still available (prevent race conditions)
     const conflicting = await this.prisma.appointment.findFirst({
       where: {
         barberId: barber.id,
@@ -208,7 +226,6 @@ export class AppointmentsService {
       );
     }
 
-    // Upsert the client (guest)
     const client = await this.prisma.client.upsert({
       where: {
         email_phone: {
@@ -224,7 +241,6 @@ export class AppointmentsService {
       },
     });
 
-    // Create Google Calendar event
     const googleEventId = await this.calendarService.createEvent(barber.id, {
       summary: `✂️ ${service.name} — ${client.name}`,
       description: `Cliente: ${client.name}\nTeléfono: ${client.phone}\nEmail: ${client.email}\nServicio: ${service.name}\nDuración: ${service.durationMin} min`,
@@ -233,7 +249,6 @@ export class AppointmentsService {
       attendeeEmail: client.email,
     });
 
-    // Create the appointment with price snapshot
     const appointment = await this.prisma.appointment.create({
       data: {
         startTime,
@@ -252,7 +267,6 @@ export class AppointmentsService {
       },
     });
 
-    // Send confirmation email
     await this.emailService.sendBookingConfirmation({
       clientName: client.name,
       clientEmail: client.email,
@@ -269,9 +283,6 @@ export class AppointmentsService {
     return appointment;
   }
 
-  /**
-   * List appointments using the default barber (for dashboard).
-   */
   async findAllWithDefaultBarber(filters?: {
     date?: string;
     status?: AppointmentStatus;
@@ -280,9 +291,6 @@ export class AppointmentsService {
     return this.findAllByBarberId(barber.id, filters);
   }
 
-  /**
-   * List appointments by barber ID with optional filters.
-   */
   async findAllByBarberId(
     barberId: string,
     filters?: {
@@ -301,8 +309,6 @@ export class AppointmentsService {
       const dayEnd = new Date(filters.date + 'T23:59:59-03:00');
       const gte = new Date(dayStart.getTime() + 3 * 60 * 60 * 1000);
       const lte = new Date(dayEnd.getTime() + 3 * 60 * 60 * 1000);
-      console.log(`[Appointments] Query date: ${filters.date}, barberId: ${barberId}`);
-      console.log(`[Appointments] Query range: gte=${gte.toISOString()}, lte=${lte.toISOString()}`);
       where.startTime = { gte, lte };
     }
 
@@ -316,23 +322,6 @@ export class AppointmentsService {
     });
   }
 
-  /**
-   * List appointments with optional filters (protected — barber dashboard).
-   * @deprecated Use findAllWithDefaultBarber instead
-   */
-  async findAll(
-    barberId: string,
-    filters?: {
-      date?: string;
-      status?: AppointmentStatus;
-    },
-  ) {
-    return this.findAllByBarberId(barberId, filters);
-  }
-
-  /**
-   * Update appointment status using default barber.
-   */
   async updateStatusWithDefaultBarber(
     appointmentId: string,
     dto: UpdateStatusDto,
@@ -341,9 +330,6 @@ export class AppointmentsService {
     return this.updateStatus(appointmentId, barber.id, dto);
   }
 
-  /**
-   * Update appointment status (protected — barber only).
-   */
   async updateStatus(
     appointmentId: string,
     barberId: string,
@@ -361,17 +347,12 @@ export class AppointmentsService {
       throw new NotFoundException('Turno no encontrado');
     }
 
-    // If cancelling, delete the Google Calendar event
-    if (
-      dto.status === 'CANCELADO' &&
-      appointment.googleEventId
-    ) {
+    if (dto.status === 'CANCELADO' && appointment.googleEventId) {
       await this.calendarService.deleteEvent(
         barberId,
         appointment.googleEventId,
       );
 
-      // Send cancellation email
       await this.emailService.sendCancellationNotification({
         clientName: appointment.client.name,
         clientEmail: appointment.client.email,
