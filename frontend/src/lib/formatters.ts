@@ -1,6 +1,4 @@
-/**
- * Utility functions for formatting dates and currency in Argentine locale.
- */
+const TZ = 'America/Argentina/Buenos_Aires';
 
 /**
  * Format a price in ARS (Argentine Pesos).
@@ -29,17 +27,13 @@ function parseLocalDate(dateStr: string): Date {
  * Example: "martes, 6 de mayo de 2026"
  */
 export function formatDateES(date: Date | string): string {
-  const d = typeof date === 'string' && date.length === 10
-    ? parseLocalDate(date)
-    : typeof date === 'string'
-      ? new Date(date)
-      : date;
+  const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('es-AR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    timeZone: 'America/Argentina/Buenos_Aires',
+    timeZone: TZ,
   });
 }
 
@@ -48,16 +42,12 @@ export function formatDateES(date: Date | string): string {
  * Example: "06/05/2026"
  */
 export function formatDateShort(date: Date | string): string {
-  const d = typeof date === 'string' && date.length === 10
-    ? parseLocalDate(date)
-    : typeof date === 'string'
-      ? new Date(date)
-      : date;
+  const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('es-AR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-    timeZone: 'America/Argentina/Buenos_Aires',
+    timeZone: TZ,
   });
 }
 
@@ -71,7 +61,7 @@ export function formatTimeES(date: Date | string): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: 'America/Argentina/Buenos_Aires',
+    timeZone: TZ,
   });
 }
 
@@ -87,16 +77,13 @@ export function formatTimeRange(start: Date | string, end: Date | string): strin
  * Get a YYYY-MM-DD string from a Date (in Argentina timezone).
  */
 export function toDateString(date: Date): string {
-  const d = new Date(date.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+  const d = new Date(date.toLocaleString('en-US', { timeZone: TZ }));
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/**
- * Get today's date as YYYY-MM-DD string in Argentina timezone.
- */
 export function getTodayDateString(): string {
   const now = new Date();
-  const argentinaDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+  const argentinaDate = new Date(now.toLocaleString('en-US', { timeZone: TZ }));
   return `${argentinaDate.getFullYear()}-${String(argentinaDate.getMonth() + 1).padStart(2, '0')}-${String(argentinaDate.getDate()).padStart(2, '0')}`;
 }
 

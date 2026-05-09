@@ -10,6 +10,7 @@ export class ServicesService {
   private async getDefaultBarber() {
     const barber = await this.prisma.user.findFirst({
       where: { role: 'BARBER' },
+      orderBy: { updatedAt: 'desc' },
     });
     if (!barber) {
       throw new Error('No se encontró un barbero configurado');

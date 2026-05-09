@@ -113,6 +113,8 @@
 | 2026-05-07 | Cambio de estética a blanco y negro | Actualizada toda la página a配色 blanco y negro (Helvetica, sidebar, dashboard, página de reserva). Se mantienen colores en sección Ingresos como solicitaste. |
 | 2026-05-07 | Sistema de turnos: 1 por hora, 40 min duración | Modificado el backend para generar slots cada 60 minutos con duración fija de 40 minutos (20 min de buffer entre turnos). |
 | 2026-05-08 | Split shifts (turno partido) | El horario de trabajo ahora soporta dos rangos por día: mañana y tarde. Schema Prisma actualizado con morningStart/morningEnd y afternoonStart/afternoonEnd. El frontend de configuración permite activar/desactivar el turno de tarde. El algoritmo de slots genera horarios dentro de ambos rangos independientes. El buffer de 10 min se aplica dentro de cada rango. |
+| 2026-05-08 | Slots dinámicos según horario real de BD | Eliminado el hardcodeo de SLOT_INTERVAL_MINUTES y APPOINTMENT_DURATION_MINUTES. Ahora el slot interval y la duración se calculan dinámicamente a partir de `service.durationMin`. Los slots se generan siguiendo los rangos de mañana y tarde configurados en la base de datos (turnos semanales). |
+| 2026-05-08 | Corrección de timezone Argentina UTC-3 | Eliminado el offset incorrecto de -3h en `toArgentinaISO()` y `buildRangeBoundaries()` del backend. Los slots ahora se generan y retornan en UTC puro (almacenamiento correcto en PostgreSQL). En el frontend, `formatTimeES` ahora usa `parseISOLocal()` que extrae las componentes de fecha/hora del ISO string sin tratar la fecha como UTC. Esto elimina el desfase de ~2 horas que mostraba horarios adelantados. |
 
 ---
 

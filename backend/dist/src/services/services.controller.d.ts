@@ -14,45 +14,45 @@ export declare class ServicesController {
     findAll(): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
-        updatedAt: Date;
         description: string | null;
         price: import("@prisma/client/runtime/library").Decimal;
         durationMin: number;
         isActive: boolean;
         barberId: string;
+        createdAt: Date;
+        updatedAt: Date;
     }[]>;
     create(dto: CreateServiceDto): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
-        updatedAt: Date;
         description: string | null;
         price: import("@prisma/client/runtime/library").Decimal;
         durationMin: number;
         isActive: boolean;
         barberId: string;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     update(id: string, dto: UpdateServiceDto): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
-        updatedAt: Date;
         description: string | null;
         price: import("@prisma/client/runtime/library").Decimal;
         durationMin: number;
         isActive: boolean;
         barberId: string;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     deactivate(id: string): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
-        updatedAt: Date;
         description: string | null;
         price: import("@prisma/client/runtime/library").Decimal;
         durationMin: number;
         isActive: boolean;
         barberId: string;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
 }

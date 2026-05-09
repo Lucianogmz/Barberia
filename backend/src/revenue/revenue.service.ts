@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const TZ = 'America/Argentina/Buenos_Aires';
 
 export interface RevenueSummary {
   totalRevenue: number;
@@ -27,6 +35,7 @@ export class RevenueService {
   private async getDefaultBarber() {
     const barber = await this.prisma.user.findFirst({
       where: { role: 'BARBER' },
+      orderBy: { updatedAt: 'desc' },
     });
     if (!barber) {
       throw new Error('No se encontró un barbero configurado');
@@ -38,8 +47,11 @@ export class RevenueService {
    * Helper: Get Argentina timezone date boundaries in UTC.
    */
   private getDateRangeUTC(startDate: Date, endDate: Date) {
-    const startUTC = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
-    const endUTC = new Date(endDate.getTime() + 3 * 60 * 60 * 1000);
+    // startDate and endDate are assumed to be generated as local dates in Argentina time.
+    // However, since they were constructed with new Date(), their absolute time is wrong if the server isn't in Argentina time.
+    // We will assume they represent the correct year, month, date in Argentina time.
+    const startUTC = dayjs.tz(`${startDate.getFullYear()}-${startDate.getMonth() + 1}-${startDate.getDate()} 00:00:00`, TZ).toDate();
+    const endUTC = dayjs.tz(`${endDate.getFullYear()}-${endDate.getMonth() + 1}-${endDate.getDate()} 00:00:00`, TZ).toDate();
     return { startUTC, endUTC };
   }
 

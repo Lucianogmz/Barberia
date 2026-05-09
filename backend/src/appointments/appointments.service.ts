@@ -11,11 +11,15 @@ import { ScheduleService } from '../schedule/schedule.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { AppointmentStatus } from '@prisma/client';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const BUFFER_MINUTES = 10;
-const SLOT_INTERVAL_MINUTES = 60;
-const APPOINTMENT_DURATION_MINUTES = 40;
-const TZ_OFFSET_MS = -3 * 60 * 60 * 1000;
+const TZ = 'America/Argentina/Buenos_Aires';
 
 export interface TimeSlot {
   startTime: string;
@@ -37,6 +41,7 @@ export class AppointmentsService {
   private async getDefaultBarber() {
     const barber = await this.prisma.user.findFirst({
       where: { role: 'BARBER' },
+      orderBy: { updatedAt: 'desc' },
     });
 
     if (!barber) {
@@ -47,60 +52,45 @@ export class AppointmentsService {
   }
 
   private toArgentinaISO(date: Date): string {
-    const argentinaTime = new Date(date.getTime() + TZ_OFFSET_MS);
-    return argentinaTime.toISOString().replace('Z', '-03:00');
+    return dayjs(date).tz(TZ).format();
   }
 
   private buildRangeBoundaries(
-    targetDate: Date,
+    dateStr: string,
     morningStart: string,
     morningEnd: string,
     afternoonStart: string | null,
     afternoonEnd: string | null,
   ) {
-    const parseHHMM = (str: string, base: Date) => {
-      const [h, m] = str.split(':').map(Number);
-      const d = new Date(base);
-      d.setHours(h, m, 0, 0);
-      return d;
+    const parseHHMM = (str: string) => {
+      // Create date strictly in Argentina timezone
+      return dayjs.tz(`${dateStr}T${str}:00`, TZ).toDate();
     };
 
-    const morningStartTime = parseHHMM(morningStart, targetDate);
-    const morningEndTime = parseHHMM(morningEnd, targetDate);
-    const afternoonStartTime = afternoonStart
-      ? parseHHMM(afternoonStart, targetDate)
-      : null;
-    const afternoonEndTime = afternoonEnd ? parseHHMM(afternoonEnd, targetDate) : null;
-
-    const toUTC = (d: Date) => new Date(d.getTime() - TZ_OFFSET_MS);
+    const morningStartTime = parseHHMM(morningStart);
+    const morningEndTime = parseHHMM(morningEnd);
+    const afternoonStartTime = afternoonStart ? parseHHMM(afternoonStart) : null;
+    const afternoonEndTime = afternoonEnd ? parseHHMM(afternoonEnd) : null;
 
     return {
       ranges: [
         {
-          localStart: morningStartTime,
-          localEnd: morningEndTime,
-          utcStart: toUTC(morningStartTime),
-          utcEnd: toUTC(morningEndTime),
+          utcStart: morningStartTime,
+          utcEnd: morningEndTime,
         },
         afternoonStartTime && afternoonEndTime
           ? {
-              localStart: afternoonStartTime,
-              localEnd: afternoonEndTime,
-              utcStart: toUTC(afternoonStartTime),
-              utcEnd: toUTC(afternoonEndTime),
+              utcStart: afternoonStartTime,
+              utcEnd: afternoonEndTime,
             }
           : null,
       ].filter(Boolean) as {
-        localStart: Date;
-        localEnd: Date;
         utcStart: Date;
         utcEnd: Date;
       }[],
-      allUtcStart: toUTC(
-        afternoonEndTime && afternoonStartTime
+      allUtcStart: afternoonEndTime && afternoonStartTime
           ? afternoonEndTime
           : morningEndTime,
-      ),
     };
   }
 
@@ -114,7 +104,7 @@ export class AppointmentsService {
       throw new NotFoundException('Servicio no encontrado');
     }
 
-    const targetDate = new Date(date + 'T00:00:00-03:00');
+    const targetDate = dayjs.tz(`${date}T12:00:00`, TZ).toDate();
     const dayOfWeek = targetDate.getDay();
 
     const schedule = await this.scheduleService.getScheduleForDay(
@@ -127,27 +117,32 @@ export class AppointmentsService {
     }
 
     const { ranges, allUtcStart } = this.buildRangeBoundaries(
-      targetDate,
+      date,
       schedule.morningStart,
       schedule.morningEnd,
       schedule.afternoonStart,
       schedule.afternoonEnd,
     );
 
+    const firstUtc = ranges[0].utcStart;
+    const lastUtc = allUtcStart;
+
     const existingAppointments = await this.prisma.appointment.findMany({
       where: {
         barberId: barber.id,
         status: { in: ['PENDIENTE', 'COMPLETADO'] },
-        startTime: { gte: ranges[0].utcStart },
-        endTime: { lte: allUtcStart },
+        AND: [
+          { startTime: { lt: lastUtc } },
+          { endTime: { gt: firstUtc } },
+        ],
       },
       select: { startTime: true, endTime: true },
     });
 
     const busyIntervals = await this.calendarService.getBusyIntervals(
       barber.id,
-      ranges[0].utcStart,
-      allUtcStart,
+      firstUtc,
+      lastUtc,
     );
 
     const allBusyIntervals = [
@@ -159,8 +154,8 @@ export class AppointmentsService {
     ];
 
     const slots: TimeSlot[] = [];
-    const slotInterval = SLOT_INTERVAL_MINUTES * 60 * 1000;
-    const appointmentDuration = APPOINTMENT_DURATION_MINUTES * 60 * 1000;
+    const slotInterval = service.durationMin * 60 * 1000;
+    const appointmentDuration = service.durationMin * 60 * 1000;
     const now = new Date();
 
     for (const range of ranges) {
@@ -204,7 +199,7 @@ export class AppointmentsService {
 
     const startTime = new Date(dto.startTime);
     const endTime = new Date(
-      startTime.getTime() + APPOINTMENT_DURATION_MINUTES * 60 * 1000,
+      startTime.getTime() + service.durationMin * 60 * 1000,
     );
 
     const conflicting = await this.prisma.appointment.findFirst({
@@ -305,11 +300,10 @@ export class AppointmentsService {
     }
 
     if (filters?.date) {
-      const dayStart = new Date(filters.date + 'T00:00:00-03:00');
-      const dayEnd = new Date(filters.date + 'T23:59:59-03:00');
-      const gte = new Date(dayStart.getTime() + 3 * 60 * 60 * 1000);
-      const lte = new Date(dayEnd.getTime() + 3 * 60 * 60 * 1000);
-      where.startTime = { gte, lte };
+      where.startTime = {
+        gte: dayjs.tz(`${filters.date}T00:00:00`, TZ).toDate(),
+        lte: dayjs.tz(`${filters.date}T23:59:59`, TZ).toDate(),
+      };
     }
 
     return this.prisma.appointment.findMany({

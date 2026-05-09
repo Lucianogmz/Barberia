@@ -8,10 +8,19 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RevenueService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const dayjs_1 = __importDefault(require("dayjs"));
+const utc_1 = __importDefault(require("dayjs/plugin/utc"));
+const timezone_1 = __importDefault(require("dayjs/plugin/timezone"));
+dayjs_1.default.extend(utc_1.default);
+dayjs_1.default.extend(timezone_1.default);
+const TZ = 'America/Argentina/Buenos_Aires';
 let RevenueService = class RevenueService {
     prisma;
     constructor(prisma) {
@@ -20,6 +29,7 @@ let RevenueService = class RevenueService {
     async getDefaultBarber() {
         const barber = await this.prisma.user.findFirst({
             where: { role: 'BARBER' },
+            orderBy: { updatedAt: 'desc' },
         });
         if (!barber) {
             throw new Error('No se encontró un barbero configurado');
@@ -27,8 +37,8 @@ let RevenueService = class RevenueService {
         return barber;
     }
     getDateRangeUTC(startDate, endDate) {
-        const startUTC = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
-        const endUTC = new Date(endDate.getTime() + 3 * 60 * 60 * 1000);
+        const startUTC = dayjs_1.default.tz(`${startDate.getFullYear()}-${startDate.getMonth() + 1}-${startDate.getDate()} 00:00:00`, TZ).toDate();
+        const endUTC = dayjs_1.default.tz(`${endDate.getFullYear()}-${endDate.getMonth() + 1}-${endDate.getDate()} 00:00:00`, TZ).toDate();
         return { startUTC, endUTC };
     }
     async getMonthlyRevenueWithDefaultBarber(year, month) {
