@@ -7,17 +7,6 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 export class ServicesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async getDefaultBarber() {
-    const barber = await this.prisma.user.findFirst({
-      where: { role: 'BARBER' },
-      orderBy: { updatedAt: 'desc' },
-    });
-    if (!barber) {
-      throw new Error('No se encontró un barbero configurado');
-    }
-    return barber;
-  }
-
   /**
    * List active services (public — for client booking).
    */
@@ -36,14 +25,6 @@ export class ServicesService {
   }
 
   /**
-   * Wrapper: Find all services using default barber.
-   */
-  async findAllWithDefaultBarber() {
-    const barber = await this.getDefaultBarber();
-    return this.findAll(barber.id);
-  }
-
-  /**
    * List all services including inactive (protected — for barber dashboard).
    */
   async findAll(barberId: string) {
@@ -51,30 +32,6 @@ export class ServicesService {
       where: { barberId },
       orderBy: { createdAt: 'desc' },
     });
-  }
-
-  /**
-   * Wrapper: Create service using default barber.
-   */
-  async createWithDefaultBarber(dto: CreateServiceDto) {
-    const barber = await this.getDefaultBarber();
-    return this.create(barber.id, dto);
-  }
-
-  /**
-   * Wrapper: Update service using default barber.
-   */
-  async updateWithDefaultBarber(id: string, dto: UpdateServiceDto) {
-    const barber = await this.getDefaultBarber();
-    return this.update(id, barber.id, dto);
-  }
-
-  /**
-   * Wrapper: Deactivate service using default barber.
-   */
-  async deactivateWithDefaultBarber(id: string) {
-    const barber = await this.getDefaultBarber();
-    return this.deactivate(id, barber.id);
   }
 
   /**

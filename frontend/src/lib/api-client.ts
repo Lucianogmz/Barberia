@@ -24,6 +24,10 @@ async function fetchAPI<T>(endpoint: string, options: FetchOptions = {}): Promis
   });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('barberia_api_token');
+      // Optional: window.location.href = '/barber/login';
+    }
     const error = await response.json().catch(() => ({}));
     throw new Error(error.message ?? `Error ${response.status}`);
   }

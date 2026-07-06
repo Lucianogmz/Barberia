@@ -18,17 +18,17 @@ export declare class AppointmentsController {
         };
     } & {
         id: string;
-        startTime: Date;
-        endTime: Date;
-        status: import("@prisma/client").$Enums.AppointmentStatus;
-        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
-        googleEventId: string | null;
-        notes: string | null;
         createdAt: Date;
         updatedAt: Date;
         barberId: string;
-        serviceId: string;
         clientId: string;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        startTime: Date;
+        notes: string | null;
+        endTime: Date;
+        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
+        googleEventId: string | null;
     }>;
     findAll(req: any, date?: string, status?: AppointmentStatus): Promise<({
         service: {
@@ -42,17 +42,17 @@ export declare class AppointmentsController {
         };
     } & {
         id: string;
-        startTime: Date;
-        endTime: Date;
-        status: import("@prisma/client").$Enums.AppointmentStatus;
-        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
-        googleEventId: string | null;
-        notes: string | null;
         createdAt: Date;
         updatedAt: Date;
         barberId: string;
-        serviceId: string;
         clientId: string;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        startTime: Date;
+        notes: string | null;
+        endTime: Date;
+        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
+        googleEventId: string | null;
     })[]>;
     updateStatus(id: string, req: any, dto: UpdateStatusDto): Promise<{
         service: {
@@ -66,16 +66,16 @@ export declare class AppointmentsController {
         };
     } & {
         id: string;
-        startTime: Date;
-        endTime: Date;
-        status: import("@prisma/client").$Enums.AppointmentStatus;
-        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
-        googleEventId: string | null;
-        notes: string | null;
         createdAt: Date;
         updatedAt: Date;
         barberId: string;
-        serviceId: string;
         clientId: string;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
+        serviceId: string;
+        startTime: Date;
+        notes: string | null;
+        endTime: Date;
+        priceAtBooking: import("@prisma/client/runtime/library").Decimal;
+        googleEventId: string | null;
     }>;
 }

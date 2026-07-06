@@ -31,7 +31,7 @@ export default function LoginPage() {
           </div>
 
           <Button
-            onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+            onClick={() => signIn('google', { callbackUrl: '/barber' })}
             className="w-full bg-white text-slate-900 hover:bg-slate-50 font-medium py-5 text-base border border-slate-200/60 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">

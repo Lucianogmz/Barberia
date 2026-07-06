@@ -26,8 +26,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const [apiToken, setApiToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'unauthenticated' && pathname !== '/dashboard/login') {
-      router.push('/dashboard/login');
+    if (status === 'unauthenticated' && pathname !== '/barber/login') {
+      router.push('/barber/login');
     }
   }, [status, router, pathname]);
 
@@ -74,14 +74,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (status === 'unauthenticated' && pathname !== '/dashboard/login') return null;
+  if (status === 'unauthenticated' && pathname !== '/barber/login') return null;
 
   const navItems = [
-    { href: '/dashboard', label: 'Panel', icon: LayoutDashboard },
-    { href: '/dashboard/turnos', label: 'Turnos', icon: CalendarDays },
-    { href: '/dashboard/servicios', label: 'Servicios', icon: Scissors },
-    { href: '/dashboard/ingresos', label: 'Ingresos', icon: DollarSign },
-    { href: '/dashboard/configuracion', label: 'Configuración', icon: Settings },
+    { href: '/barber', label: 'Panel', icon: LayoutDashboard },
+    { href: '/barber/turnos', label: 'Turnos', icon: CalendarDays },
+    { href: '/barber/servicios', label: 'Servicios', icon: Scissors },
+    { href: '/barber/ingresos', label: 'Ingresos', icon: DollarSign },
+    { href: '/barber/configuracion', label: 'Configuración', icon: Settings },
   ];
 
   const handleLogout = () => {

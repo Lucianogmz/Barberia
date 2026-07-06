@@ -1,10 +1,13 @@
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterTokensDto } from './dto/register-tokens.dto';
 export declare class AuthService {
     private readonly prisma;
     private readonly jwtService;
-    constructor(prisma: PrismaService, jwtService: JwtService);
+    private readonly configService;
+    constructor(prisma: PrismaService, jwtService: JwtService, configService: ConfigService);
+    private assertEmailAllowed;
     registerTokens(dto: RegisterTokensDto): Promise<{
         user: {
             id: string;

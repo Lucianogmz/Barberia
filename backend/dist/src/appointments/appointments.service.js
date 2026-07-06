@@ -19,6 +19,7 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const calendar_service_1 = require("../calendar/calendar.service");
 const email_service_1 = require("../email/email.service");
 const schedule_service_1 = require("../schedule/schedule.service");
+const client_1 = require("@prisma/client");
 const dayjs_1 = __importDefault(require("dayjs"));
 const utc_1 = __importDefault(require("dayjs/plugin/utc"));
 const timezone_1 = __importDefault(require("dayjs/plugin/timezone"));
@@ -26,6 +27,7 @@ dayjs_1.default.extend(utc_1.default);
 dayjs_1.default.extend(timezone_1.default);
 const BUFFER_MINUTES = 10;
 const TZ = 'America/Argentina/Buenos_Aires';
+const OCCUPYING_STATUSES = ['PENDIENTE', 'COMPLETADO'];
 let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
     prisma;
     calendarService;
@@ -97,7 +99,7 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
         const existingAppointments = await this.prisma.appointment.findMany({
             where: {
                 barberId: barber.id,
-                status: { in: ['PENDIENTE', 'COMPLETADO'] },
+                status: { in: OCCUPYING_STATUSES },
                 AND: [
                     { startTime: { lt: lastUtc } },
                     { endTime: { gt: firstUtc } },
@@ -143,21 +145,10 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
         }
         const startTime = new Date(dto.startTime);
         const endTime = new Date(startTime.getTime() + service.durationMin * 60 * 1000);
-        const conflicting = await this.prisma.appointment.findFirst({
-            where: {
-                barberId: barber.id,
-                status: 'PENDIENTE',
-                OR: [
-                    {
-                        startTime: { lt: endTime },
-                        endTime: { gt: startTime },
-                    },
-                ],
-            },
-        });
-        if (conflicting) {
-            throw new common_1.BadRequestException('Este horario ya no está disponible. Por favor, elegí otro.');
+        if (startTime.getTime() <= Date.now()) {
+            throw new common_1.BadRequestException('No se puede reservar en el pasado.');
         }
+        const startMinusBuffer = new Date(startTime.getTime() - BUFFER_MINUTES * 60 * 1000);
         const client = await this.prisma.client.upsert({
             where: {
                 email_phone: {
@@ -172,6 +163,48 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
                 email: dto.clientEmail,
             },
         });
+        let appointment;
+        try {
+            appointment = await this.prisma.$transaction(async (tx) => {
+                const conflicting = await tx.appointment.findFirst({
+                    where: {
+                        barberId: barber.id,
+                        status: { in: OCCUPYING_STATUSES },
+                        startTime: { lt: endTime },
+                        endTime: { gt: startMinusBuffer },
+                    },
+                    select: { id: true },
+                });
+                if (conflicting) {
+                    throw new common_1.BadRequestException('Este horario ya no está disponible. Por favor, elegí otro.');
+                }
+                return tx.appointment.create({
+                    data: {
+                        startTime,
+                        endTime,
+                        status: 'PENDIENTE',
+                        priceAtBooking: service.price,
+                        notes: dto.notes,
+                        barberId: barber.id,
+                        serviceId: service.id,
+                        clientId: client.id,
+                    },
+                    include: {
+                        service: { select: { name: true, durationMin: true } },
+                        client: { select: { name: true, email: true, phone: true } },
+                    },
+                });
+            }, { isolationLevel: client_1.Prisma.TransactionIsolationLevel.Serializable });
+        }
+        catch (error) {
+            if (error instanceof common_1.BadRequestException)
+                throw error;
+            if (error instanceof client_1.Prisma.PrismaClientKnownRequestError &&
+                (error.code === 'P2002' || error.code === 'P2034')) {
+                throw new common_1.BadRequestException('Este horario ya no está disponible. Por favor, elegí otro.');
+            }
+            throw error;
+        }
         const googleEventId = await this.calendarService.createEvent(barber.id, {
             summary: `✂️ ${service.name} — ${client.name}`,
             description: `Cliente: ${client.name}\nTeléfono: ${client.phone}\nEmail: ${client.email}\nServicio: ${service.name}\nDuración: ${service.durationMin} min`,
@@ -179,23 +212,13 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
             endTime,
             attendeeEmail: client.email,
         });
-        const appointment = await this.prisma.appointment.create({
-            data: {
-                startTime,
-                endTime,
-                status: 'PENDIENTE',
-                priceAtBooking: service.price,
-                googleEventId,
-                notes: dto.notes,
-                barberId: barber.id,
-                serviceId: service.id,
-                clientId: client.id,
-            },
-            include: {
-                service: { select: { name: true, durationMin: true } },
-                client: { select: { name: true, email: true, phone: true } },
-            },
-        });
+        if (googleEventId) {
+            await this.prisma.appointment.update({
+                where: { id: appointment.id },
+                data: { googleEventId },
+            });
+            appointment.googleEventId = googleEventId;
+        }
         await this.emailService.sendBookingConfirmation({
             clientName: client.name,
             clientEmail: client.email,
@@ -206,10 +229,6 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
         });
         this.logger.log(`New appointment created: ${appointment.id} for ${client.name}`);
         return appointment;
-    }
-    async findAllWithDefaultBarber(filters) {
-        const barber = await this.getDefaultBarber();
-        return this.findAllByBarberId(barber.id, filters);
     }
     async findAllByBarberId(barberId, filters) {
         const where = { barberId };
@@ -230,10 +249,6 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
             },
             orderBy: { startTime: 'asc' },
         });
-    }
-    async updateStatusWithDefaultBarber(appointmentId, dto) {
-        const barber = await this.getDefaultBarber();
-        return this.updateStatus(appointmentId, barber.id, dto);
     }
     async updateStatus(appointmentId, barberId, dto) {
         const appointment = await this.prisma.appointment.findFirst({

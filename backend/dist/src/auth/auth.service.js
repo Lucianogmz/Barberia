@@ -12,15 +12,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
+const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../prisma/prisma.service");
 let AuthService = class AuthService {
     prisma;
     jwtService;
-    constructor(prisma, jwtService) {
+    configService;
+    constructor(prisma, jwtService, configService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
+        this.configService = configService;
+    }
+    assertEmailAllowed(email) {
+        const raw = this.configService.get('ALLOWED_BARBER_EMAILS') ?? '';
+        const allowed = raw
+            .split(',')
+            .map((e) => e.trim().toLowerCase())
+            .filter(Boolean);
+        if (allowed.length > 0 && !allowed.includes(email.toLowerCase())) {
+            throw new common_1.ForbiddenException('Esta cuenta no está autorizada para acceder al panel.');
+        }
     }
     async registerTokens(dto) {
+        this.assertEmailAllowed(dto.email);
         const user = await this.prisma.user.upsert({
             where: { email: dto.email },
             update: {
@@ -75,6 +89,7 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        config_1.ConfigService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

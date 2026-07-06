@@ -31,7 +31,7 @@ export class ScheduleService {
     });
 
     return Array.from({ length: 7 }, (_, i) => {
-      const existing = schedules.find((s) => s.dayOfWeek === i);
+      const existing = schedules.find((s: any) => s.dayOfWeek === i);
       return {
         dayOfWeek: i,
         dayName: DAY_NAMES_ES[i],

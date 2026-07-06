@@ -26,17 +26,17 @@ let ServicesController = class ServicesController {
     async findActive() {
         return this.servicesService.findActive();
     }
-    async findAll() {
-        return this.servicesService.findAllWithDefaultBarber();
+    async findAll(req) {
+        return this.servicesService.findAll(req.user.id);
     }
-    async create(dto) {
-        return this.servicesService.createWithDefaultBarber(dto);
+    async create(req, dto) {
+        return this.servicesService.create(req.user.id, dto);
     }
-    async update(id, dto) {
-        return this.servicesService.updateWithDefaultBarber(id, dto);
+    async update(id, req, dto) {
+        return this.servicesService.update(id, req.user.id, dto);
     }
-    async deactivate(id) {
-        return this.servicesService.deactivateWithDefaultBarber(id);
+    async deactivate(id, req) {
+        return this.servicesService.deactivate(id, req.user.id);
     }
 };
 exports.ServicesController = ServicesController;
@@ -49,33 +49,37 @@ __decorate([
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('all'),
+    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ServicesController.prototype, "findAll", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_service_dto_1.CreateServiceDto]),
+    __metadata("design:paramtypes", [Object, create_service_dto_1.CreateServiceDto]),
     __metadata("design:returntype", Promise)
 ], ServicesController.prototype, "create", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_service_dto_1.UpdateServiceDto]),
+    __metadata("design:paramtypes", [String, Object, update_service_dto_1.UpdateServiceDto]),
     __metadata("design:returntype", Promise)
 ], ServicesController.prototype, "update", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], ServicesController.prototype, "deactivate", null);
 exports.ServicesController = ServicesController = __decorate([

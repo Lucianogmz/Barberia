@@ -30,53 +30,16 @@ export class RevenueService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Helper: Get the default barber.
+   * Helper: rango [inicio, fin) del mes indicado (month 1-indexado),
+   * calculado en hora de Argentina y devuelto en UTC.
+   * Independiente del huso del servidor (Vercel/Railway corren en UTC).
    */
-  private async getDefaultBarber() {
-    const barber = await this.prisma.user.findFirst({
-      where: { role: 'BARBER' },
-      orderBy: { updatedAt: 'desc' },
-    });
-    if (!barber) {
-      throw new Error('No se encontró un barbero configurado');
-    }
-    return barber;
-  }
-
-  /**
-   * Helper: Get Argentina timezone date boundaries in UTC.
-   */
-  private getDateRangeUTC(startDate: Date, endDate: Date) {
-    // startDate and endDate are assumed to be generated as local dates in Argentina time.
-    // However, since they were constructed with new Date(), their absolute time is wrong if the server isn't in Argentina time.
-    // We will assume they represent the correct year, month, date in Argentina time.
-    const startUTC = dayjs.tz(`${startDate.getFullYear()}-${startDate.getMonth() + 1}-${startDate.getDate()} 00:00:00`, TZ).toDate();
-    const endUTC = dayjs.tz(`${endDate.getFullYear()}-${endDate.getMonth() + 1}-${endDate.getDate()} 00:00:00`, TZ).toDate();
-    return { startUTC, endUTC };
-  }
-
-  /**
-   * Wrapper: Get monthly revenue using default barber.
-   */
-  async getMonthlyRevenueWithDefaultBarber(year: number, month: number) {
-    const barber = await this.getDefaultBarber();
-    return this.getMonthlyRevenue(barber.id, year, month);
-  }
-
-  /**
-   * Wrapper: Get service breakdown using default barber.
-   */
-  async getServiceBreakdownWithDefaultBarber(year: number, month: number) {
-    const barber = await this.getDefaultBarber();
-    return this.getServiceBreakdown(barber.id, year, month);
-  }
-
-  /**
-   * Wrapper: Get dashboard summary using default barber.
-   */
-  async getDashboardSummaryWithDefaultBarber() {
-    const barber = await this.getDefaultBarber();
-    return this.getDashboardSummary(barber.id);
+  private getMonthRangeUTC(year: number, month: number) {
+    const start = dayjs.tz(
+      `${year}-${String(month).padStart(2, '0')}-01 00:00:00`,
+      TZ,
+    );
+    return { startUTC: start.toDate(), endUTC: start.add(1, 'month').toDate() };
   }
 
   /**
@@ -87,9 +50,7 @@ export class RevenueService {
     year: number,
     month: number, // 1-indexed (1=January)
   ): Promise<RevenueSummary> {
-    const startOfMonth = new Date(year, month - 1, 1);
-    const endOfMonth = new Date(year, month, 1); // First day of next month
-    const { startUTC, endUTC } = this.getDateRangeUTC(startOfMonth, endOfMonth);
+    const { startUTC, endUTC } = this.getMonthRangeUTC(year, month);
 
     const [completed, cancelled, noShow, pending] = await Promise.all([
       this.prisma.appointment.aggregate({
@@ -137,36 +98,24 @@ export class RevenueService {
    * Get a full dashboard summary: today, this week, this month.
    */
   async getDashboardSummary(barberId: string) {
-    const now = new Date();
+    // "Ahora" en hora de Argentina, independiente del huso del servidor.
+    const nowAr = dayjs().tz(TZ);
 
-    // Today (Argentina time)
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(now);
-    todayEnd.setHours(23, 59, 59, 999);
+    // Hoy [inicio, fin)
+    const todayStartUTC = nowAr.startOf('day').toDate();
+    const todayEndUTC = nowAr.endOf('day').toDate();
 
-    const { startUTC: todayStartUTC, endUTC: todayEndUTC } =
-      this.getDateRangeUTC(todayStart, todayEnd);
+    // Semana (lunes a lunes). dayjs: 0 = domingo.
+    const dow = nowAr.day();
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    const weekStart = nowAr.add(mondayOffset, 'day').startOf('day');
+    const weekStartUTC = weekStart.toDate();
+    const weekEndUTC = weekStart.add(7, 'day').toDate();
 
-    // This week (Monday start)
-    const weekStart = new Date(now);
-    const dayOfWeek = weekStart.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    weekStart.setDate(weekStart.getDate() + mondayOffset);
-    weekStart.setHours(0, 0, 0, 0);
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-
-    const { startUTC: weekStartUTC, endUTC: weekEndUTC } =
-      this.getDateRangeUTC(weekStart, weekEnd);
-
-    // This month
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-    const { startUTC: monthStartUTC, endUTC: monthEndUTC } =
-      this.getDateRangeUTC(monthStart, monthEnd);
+    // Mes [inicio, fin)
+    const monthStart = nowAr.startOf('month');
+    const monthStartUTC = monthStart.toDate();
+    const monthEndUTC = monthStart.add(1, 'month').toDate();
 
     const [todayRevenue, weekRevenue, monthRevenue, todayAppointments] =
       await Promise.all([
@@ -232,9 +181,7 @@ export class RevenueService {
     year: number,
     month: number,
   ): Promise<ServiceBreakdown[]> {
-    const startOfMonth = new Date(year, month - 1, 1);
-    const endOfMonth = new Date(year, month, 1);
-    const { startUTC, endUTC } = this.getDateRangeUTC(startOfMonth, endOfMonth);
+    const { startUTC, endUTC } = this.getMonthRangeUTC(year, month);
 
     const result = await this.prisma.appointment.groupBy({
       by: ['serviceId'],
@@ -249,15 +196,15 @@ export class RevenueService {
     });
 
     // Fetch service names
-    const serviceIds = result.map((r) => r.serviceId);
+    const serviceIds = result.map((r: any) => r.serviceId);
     const services = await this.prisma.service.findMany({
       where: { id: { in: serviceIds } },
       select: { id: true, name: true },
     });
 
-    const serviceMap = new Map(services.map((s) => [s.id, s.name]));
+    const serviceMap = new Map(services.map((s: any) => [s.id, s.name]));
 
-    return result.map((r) => ({
+    return result.map((r: any) => ({
       serviceId: r.serviceId,
       serviceName: serviceMap.get(r.serviceId) ?? 'Servicio eliminado',
       count: r._count,

@@ -22,17 +22,17 @@ let RevenueController = class RevenueController {
         this.revenueService = revenueService;
     }
     async getDashboardSummary(req) {
-        return this.revenueService.getDashboardSummaryWithDefaultBarber();
+        return this.revenueService.getDashboardSummary(req.user.id);
     }
     async getMonthlyRevenue(req, year, month) {
         const y = parseInt(year) || new Date().getFullYear();
         const m = parseInt(month) || new Date().getMonth() + 1;
-        return this.revenueService.getMonthlyRevenueWithDefaultBarber(y, m);
+        return this.revenueService.getMonthlyRevenue(req.user.id, y, m);
     }
     async getServiceBreakdown(req, year, month) {
         const y = parseInt(year) || new Date().getFullYear();
         const m = parseInt(month) || new Date().getMonth() + 1;
-        return this.revenueService.getServiceBreakdownWithDefaultBarber(y, m);
+        return this.revenueService.getServiceBreakdown(req.user.id, y, m);
     }
 };
 exports.RevenueController = RevenueController;

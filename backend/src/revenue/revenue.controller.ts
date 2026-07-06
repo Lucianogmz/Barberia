@@ -19,7 +19,7 @@ export class RevenueController {
    */
   @Get('summary')
   async getDashboardSummary(@Request() req: any) {
-    return this.revenueService.getDashboardSummaryWithDefaultBarber();
+    return this.revenueService.getDashboardSummary(req.user.id);
   }
 
   /**
@@ -34,7 +34,7 @@ export class RevenueController {
   ) {
     const y = parseInt(year) || new Date().getFullYear();
     const m = parseInt(month) || new Date().getMonth() + 1;
-    return this.revenueService.getMonthlyRevenueWithDefaultBarber(y, m);
+    return this.revenueService.getMonthlyRevenue(req.user.id, y, m);
   }
 
   /**
@@ -49,6 +49,6 @@ export class RevenueController {
   ) {
     const y = parseInt(year) || new Date().getFullYear();
     const m = parseInt(month) || new Date().getMonth() + 1;
-    return this.revenueService.getServiceBreakdownWithDefaultBarber(y, m);
+    return this.revenueService.getServiceBreakdown(req.user.id, y, m);
   }
 }

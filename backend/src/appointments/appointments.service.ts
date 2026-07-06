@@ -10,7 +10,7 @@ import { EmailService } from '../email/email.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus, Prisma } from '@prisma/client';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -20,6 +20,10 @@ dayjs.extend(timezone);
 
 const BUFFER_MINUTES = 10;
 const TZ = 'America/Argentina/Buenos_Aires';
+
+// Estados que ocupan un horario (no debe permitirse reservar encima de ellos).
+// CANCELADO y NO_ASISTIO liberan el horario.
+const OCCUPYING_STATUSES: AppointmentStatus[] = ['PENDIENTE', 'COMPLETADO'];
 
 export interface TimeSlot {
   startTime: string;
@@ -130,7 +134,7 @@ export class AppointmentsService {
     const existingAppointments = await this.prisma.appointment.findMany({
       where: {
         barberId: barber.id,
-        status: { in: ['PENDIENTE', 'COMPLETADO'] },
+        status: { in: OCCUPYING_STATUSES },
         AND: [
           { startTime: { lt: lastUtc } },
           { endTime: { gt: firstUtc } },
@@ -202,25 +206,16 @@ export class AppointmentsService {
       startTime.getTime() + service.durationMin * 60 * 1000,
     );
 
-    const conflicting = await this.prisma.appointment.findFirst({
-      where: {
-        barberId: barber.id,
-        status: 'PENDIENTE',
-        OR: [
-          {
-            startTime: { lt: endTime },
-            endTime: { gt: startTime },
-          },
-        ],
-      },
-    });
-
-    if (conflicting) {
-      throw new BadRequestException(
-        'Este horario ya no está disponible. Por favor, elegí otro.',
-      );
+    if (startTime.getTime() <= Date.now()) {
+      throw new BadRequestException('No se puede reservar en el pasado.');
     }
 
+    // El horario existente ocupa [start, end + buffer]; hay conflicto si se solapa.
+    const startMinusBuffer = new Date(
+      startTime.getTime() - BUFFER_MINUTES * 60 * 1000,
+    );
+
+    // Upsert del cliente (fuera de la transacción de reserva, es idempotente).
     const client = await this.prisma.client.upsert({
       where: {
         email_phone: {
@@ -236,6 +231,63 @@ export class AppointmentsService {
       },
     });
 
+    // Re-chequeo de conflicto + inserción atómicos (Serializable) para evitar
+    // dobles reservas por condición de carrera. Mismo criterio que la
+    // disponibilidad: estados ocupantes + buffer entre turnos.
+    let appointment;
+    try {
+      appointment = await this.prisma.$transaction(
+        async (tx) => {
+          const conflicting = await tx.appointment.findFirst({
+            where: {
+              barberId: barber.id,
+              status: { in: OCCUPYING_STATUSES },
+              startTime: { lt: endTime },
+              endTime: { gt: startMinusBuffer },
+            },
+            select: { id: true },
+          });
+
+          if (conflicting) {
+            throw new BadRequestException(
+              'Este horario ya no está disponible. Por favor, elegí otro.',
+            );
+          }
+
+          return tx.appointment.create({
+            data: {
+              startTime,
+              endTime,
+              status: 'PENDIENTE',
+              priceAtBooking: service.price,
+              notes: dto.notes,
+              barberId: barber.id,
+              serviceId: service.id,
+              clientId: client.id,
+            },
+            include: {
+              service: { select: { name: true, durationMin: true } },
+              client: { select: { name: true, email: true, phone: true } },
+            },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      // Violación de constraint anti-solapamiento a nivel DB (ver migración).
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2002' || error.code === 'P2034')
+      ) {
+        throw new BadRequestException(
+          'Este horario ya no está disponible. Por favor, elegí otro.',
+        );
+      }
+      throw error;
+    }
+
+    // Efectos externos DESPUÉS de confirmar el turno (evita eventos huérfanos).
     const googleEventId = await this.calendarService.createEvent(barber.id, {
       summary: `✂️ ${service.name} — ${client.name}`,
       description: `Cliente: ${client.name}\nTeléfono: ${client.phone}\nEmail: ${client.email}\nServicio: ${service.name}\nDuración: ${service.durationMin} min`,
@@ -244,23 +296,13 @@ export class AppointmentsService {
       attendeeEmail: client.email,
     });
 
-    const appointment = await this.prisma.appointment.create({
-      data: {
-        startTime,
-        endTime,
-        status: 'PENDIENTE',
-        priceAtBooking: service.price,
-        googleEventId,
-        notes: dto.notes,
-        barberId: barber.id,
-        serviceId: service.id,
-        clientId: client.id,
-      },
-      include: {
-        service: { select: { name: true, durationMin: true } },
-        client: { select: { name: true, email: true, phone: true } },
-      },
-    });
+    if (googleEventId) {
+      await this.prisma.appointment.update({
+        where: { id: appointment.id },
+        data: { googleEventId },
+      });
+      appointment.googleEventId = googleEventId;
+    }
 
     await this.emailService.sendBookingConfirmation({
       clientName: client.name,
@@ -276,14 +318,6 @@ export class AppointmentsService {
     );
 
     return appointment;
-  }
-
-  async findAllWithDefaultBarber(filters?: {
-    date?: string;
-    status?: AppointmentStatus;
-  }) {
-    const barber = await this.getDefaultBarber();
-    return this.findAllByBarberId(barber.id, filters);
   }
 
   async findAllByBarberId(
@@ -314,14 +348,6 @@ export class AppointmentsService {
       },
       orderBy: { startTime: 'asc' },
     });
-  }
-
-  async updateStatusWithDefaultBarber(
-    appointmentId: string,
-    dto: UpdateStatusDto,
-  ) {
-    const barber = await this.getDefaultBarber();
-    return this.updateStatus(appointmentId, barber.id, dto);
   }
 
   async updateStatus(

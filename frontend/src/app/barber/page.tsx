@@ -181,7 +181,7 @@ export default function DashboardPage() {
       <Card className="bg-white border border-slate-200/60 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
         <CardHeader className="flex flex-row items-center justify-between pb-5 border-b border-slate-100/80">
           <CardTitle className="text-lg font-medium text-slate-900">Turnos de Hoy</CardTitle>
-          <a href="/dashboard/turnos">
+          <a href="/barber/turnos">
             <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
               Ver todos
               <ArrowRight className="w-4 h-4 ml-1" />

@@ -31,13 +31,13 @@ let AppointmentsController = class AppointmentsController {
         return this.appointmentsService.create(dto);
     }
     async findAll(req, date, status) {
-        return this.appointmentsService.findAllWithDefaultBarber({
+        return this.appointmentsService.findAllByBarberId(req.user.id, {
             date,
             status,
         });
     }
     async updateStatus(id, req, dto) {
-        return this.appointmentsService.updateStatusWithDefaultBarber(id, dto);
+        return this.appointmentsService.updateStatus(id, req.user.id, dto);
     }
 };
 exports.AppointmentsController = AppointmentsController;

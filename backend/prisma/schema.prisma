@@ -117,6 +117,11 @@ model Appointment {
   // Indexes for efficient date-range queries (revenue, schedule)
   @@index([barberId, startTime])
   @@index([status])
+  // Optimiza agregados de ingresos (filtran por barbero + estado + rango de fecha)
+  @@index([barberId, status, startTime])
+  // NOTA: la restricción anti-solapamiento (EXCLUDE ... USING gist) no es
+  // expresable en Prisma. Se aplica por SQL manual:
+  // ver prisma/sql/0001_anti_double_booking.sql
   @@map("appointments")
 }
 

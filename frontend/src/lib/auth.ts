@@ -40,7 +40,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   pages: {
-    signIn: '/dashboard/login',
+    signIn: '/barber/login',
   },
   session: {
     strategy: 'jwt',

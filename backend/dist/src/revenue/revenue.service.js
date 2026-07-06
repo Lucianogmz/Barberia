@@ -26,37 +26,12 @@ let RevenueService = class RevenueService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async getDefaultBarber() {
-        const barber = await this.prisma.user.findFirst({
-            where: { role: 'BARBER' },
-            orderBy: { updatedAt: 'desc' },
-        });
-        if (!barber) {
-            throw new Error('No se encontró un barbero configurado');
-        }
-        return barber;
-    }
-    getDateRangeUTC(startDate, endDate) {
-        const startUTC = dayjs_1.default.tz(`${startDate.getFullYear()}-${startDate.getMonth() + 1}-${startDate.getDate()} 00:00:00`, TZ).toDate();
-        const endUTC = dayjs_1.default.tz(`${endDate.getFullYear()}-${endDate.getMonth() + 1}-${endDate.getDate()} 00:00:00`, TZ).toDate();
-        return { startUTC, endUTC };
-    }
-    async getMonthlyRevenueWithDefaultBarber(year, month) {
-        const barber = await this.getDefaultBarber();
-        return this.getMonthlyRevenue(barber.id, year, month);
-    }
-    async getServiceBreakdownWithDefaultBarber(year, month) {
-        const barber = await this.getDefaultBarber();
-        return this.getServiceBreakdown(barber.id, year, month);
-    }
-    async getDashboardSummaryWithDefaultBarber() {
-        const barber = await this.getDefaultBarber();
-        return this.getDashboardSummary(barber.id);
+    getMonthRangeUTC(year, month) {
+        const start = dayjs_1.default.tz(`${year}-${String(month).padStart(2, '0')}-01 00:00:00`, TZ);
+        return { startUTC: start.toDate(), endUTC: start.add(1, 'month').toDate() };
     }
     async getMonthlyRevenue(barberId, year, month) {
-        const startOfMonth = new Date(year, month - 1, 1);
-        const endOfMonth = new Date(year, month, 1);
-        const { startUTC, endUTC } = this.getDateRangeUTC(startOfMonth, endOfMonth);
+        const { startUTC, endUTC } = this.getMonthRangeUTC(year, month);
         const [completed, cancelled, noShow, pending] = await Promise.all([
             this.prisma.appointment.aggregate({
                 where: {
@@ -98,23 +73,17 @@ let RevenueService = class RevenueService {
         };
     }
     async getDashboardSummary(barberId) {
-        const now = new Date();
-        const todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(now);
-        todayEnd.setHours(23, 59, 59, 999);
-        const { startUTC: todayStartUTC, endUTC: todayEndUTC } = this.getDateRangeUTC(todayStart, todayEnd);
-        const weekStart = new Date(now);
-        const dayOfWeek = weekStart.getDay();
-        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        weekStart.setDate(weekStart.getDate() + mondayOffset);
-        weekStart.setHours(0, 0, 0, 0);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 7);
-        const { startUTC: weekStartUTC, endUTC: weekEndUTC } = this.getDateRangeUTC(weekStart, weekEnd);
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        const { startUTC: monthStartUTC, endUTC: monthEndUTC } = this.getDateRangeUTC(monthStart, monthEnd);
+        const nowAr = (0, dayjs_1.default)().tz(TZ);
+        const todayStartUTC = nowAr.startOf('day').toDate();
+        const todayEndUTC = nowAr.endOf('day').toDate();
+        const dow = nowAr.day();
+        const mondayOffset = dow === 0 ? -6 : 1 - dow;
+        const weekStart = nowAr.add(mondayOffset, 'day').startOf('day');
+        const weekStartUTC = weekStart.toDate();
+        const weekEndUTC = weekStart.add(7, 'day').toDate();
+        const monthStart = nowAr.startOf('month');
+        const monthStartUTC = monthStart.toDate();
+        const monthEndUTC = monthStart.add(1, 'month').toDate();
         const [todayRevenue, weekRevenue, monthRevenue, todayAppointments] = await Promise.all([
             this.prisma.appointment.aggregate({
                 where: {
@@ -168,9 +137,7 @@ let RevenueService = class RevenueService {
         };
     }
     async getServiceBreakdown(barberId, year, month) {
-        const startOfMonth = new Date(year, month - 1, 1);
-        const endOfMonth = new Date(year, month, 1);
-        const { startUTC, endUTC } = this.getDateRangeUTC(startOfMonth, endOfMonth);
+        const { startUTC, endUTC } = this.getMonthRangeUTC(year, month);
         const result = await this.prisma.appointment.groupBy({
             by: ['serviceId'],
             where: {
